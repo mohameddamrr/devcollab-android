@@ -9,9 +9,11 @@ import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mohamedamr.devcollab.data.local.database.DevCollabDatabase
 import com.mohamedamr.devcollab.data.local.entity.CachedDeveloperEntity
+import com.mohamedamr.devcollab.data.local.entity.SearchRemoteKeyEntity
 import com.mohamedamr.devcollab.domain.model.DeveloperAccountType
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
+import com.mohamedamr.devcollab.domain.model.SearchDataStatus
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryResult
 import kotlinx.coroutines.test.runTest
@@ -81,7 +83,8 @@ class DeveloperSearchRemoteMediatorTest {
             DeveloperRepositoryResult.Success(page(listOf(developer(1)), totalCount = 1))
         }
         successMediator.load(LoadType.REFRESH, emptyState())
-        val offlineMediator = mediator {
+        var reportedStatus: SearchDataStatus = SearchDataStatus.Unknown
+        val offlineMediator = mediator(onDataStatusChanged = { reportedStatus = it }) {
             DeveloperRepositoryResult.Failure(DeveloperRepositoryError.NetworkUnavailable)
         }
 
@@ -89,6 +92,7 @@ class DeveloperSearchRemoteMediatorTest {
 
         assertTrue(result is RemoteMediator.MediatorResult.Success)
         assertEquals(1, database.developerSearchDao().cachedDeveloperCount(QUERY))
+        assertEquals(SearchDataStatus.Cached(123L), reportedStatus)
     }
 
     @Test
@@ -102,13 +106,97 @@ class DeveloperSearchRemoteMediatorTest {
         assertTrue(result is RemoteMediator.MediatorResult.Error)
     }
 
+    @Test
+    fun prependEndsWithoutCallingGitHub() = runTest {
+        var remoteCalls = 0
+        val mediator = mediator {
+            remoteCalls++
+            DeveloperRepositoryResult.Success(page(emptyList(), totalCount = 0))
+        }
+
+        val result = mediator.load(LoadType.PREPEND, emptyState())
+
+        assertTrue(result is RemoteMediator.MediatorResult.Success)
+        assertTrue((result as RemoteMediator.MediatorResult.Success).endOfPaginationReached)
+        assertEquals(0, remoteCalls)
+    }
+
+    @Test
+    fun appendFailureReturnsErrorAndKeepsFirstPageCache() = runTest {
+        val mediator = mediator { requestedPage ->
+            if (requestedPage == 1) {
+                DeveloperRepositoryResult.Success(
+                    page(List(30) { developer(it.toLong()) }, totalCount = 60),
+                )
+            } else {
+                DeveloperRepositoryResult.Failure(DeveloperRepositoryError.NetworkUnavailable)
+            }
+        }
+        mediator.load(LoadType.REFRESH, emptyState())
+
+        val result = mediator.load(LoadType.APPEND, emptyState())
+
+        assertTrue(result is RemoteMediator.MediatorResult.Error)
+        assertEquals(30, database.developerSearchDao().cachedDeveloperCount(QUERY))
+        assertEquals(2, database.developerSearchDao().getRemoteKey(QUERY)?.nextPage)
+    }
+
+    @Test
+    fun emptyRefreshClearsStaleRowsAndStoresRestorableSearch() = runTest {
+        val populatedMediator = mediator {
+            DeveloperRepositoryResult.Success(page(listOf(developer(1)), totalCount = 1))
+        }
+        populatedMediator.load(LoadType.REFRESH, emptyState())
+        val emptyMediator = mediator {
+            DeveloperRepositoryResult.Success(page(emptyList(), totalCount = 0))
+        }
+
+        val result = emptyMediator.load(LoadType.REFRESH, emptyState())
+
+        assertTrue(result is RemoteMediator.MediatorResult.Success)
+        assertTrue((result as RemoteMediator.MediatorResult.Success).endOfPaginationReached)
+        assertEquals(0, database.developerSearchDao().cachedDeveloperCount(QUERY))
+        assertEquals(QUERY, database.developerSearchDao().getLastSearch()?.query)
+        assertEquals(0, database.developerSearchDao().getLastSearch()?.totalCount)
+    }
+
+    @Test
+    fun githubSearchCapStopsPaginationAtOneThousandResults() = runTest {
+        database.developerSearchDao().upsertRemoteKey(
+            SearchRemoteKeyEntity(
+                query = QUERY,
+                nextPage = 34,
+                endReached = false,
+                totalCount = 5_000,
+                cacheUpdatedAtEpochMillis = 100L,
+            ),
+        )
+        val mediator = mediator { requestedPage ->
+            assertEquals(34, requestedPage)
+            DeveloperRepositoryResult.Success(
+                page(
+                    developers = List(10) { developer(990L + it) },
+                    totalCount = 5_000,
+                ),
+            )
+        }
+
+        val result = mediator.load(LoadType.APPEND, emptyState())
+
+        assertTrue(result is RemoteMediator.MediatorResult.Success)
+        assertTrue((result as RemoteMediator.MediatorResult.Success).endOfPaginationReached)
+        assertNull(database.developerSearchDao().getRemoteKey(QUERY)?.nextPage)
+    }
+
     private fun mediator(
+        onDataStatusChanged: (SearchDataStatus) -> Unit = {},
         loader: suspend (page: Int) -> DeveloperRepositoryResult<DeveloperSearchPage>,
     ) = DeveloperSearchRemoteMediator(
         query = QUERY,
         dao = database.developerSearchDao(),
         loadRemotePage = { page, _ -> loader(page) },
         currentTimeMillis = { 123L },
+        onDataStatusChanged = onDataStatusChanged,
     )
 
     private fun emptyState() = PagingState<Int, CachedDeveloperEntity>(

@@ -315,6 +315,8 @@ verification complete.**
 
 Complete ViewModel, repository, DAO, and paging tests. Demonstrate and freeze the
 standalone VOIS baseline before advanced product work.
+**Status: implementation and automated emulator validation complete; awaiting the
+phase explanation and user-approved Git checkpoint.**
 
 ### Phase 8 - Rich GitHub profile
 
@@ -359,15 +361,15 @@ setup and test instructions, limitations, clean history, and internship presenta
 
 ## Mandatory Phase 7 checkpoint
 
-- [ ] Kotlin
-- [ ] Jetpack Compose
-- [ ] GitHub Search Users API
-- [ ] Search result list with ID, avatar, login, and useful fields
-- [ ] Details navigation and GitHub User Details API
-- [ ] Pagination with loading/error/retry/end handling
-- [ ] Room last-search persistence and relaunch restoration
-- [ ] Meaningful unit/integration tests
-- [ ] Clean Git repository and setup documentation
+- [x] Kotlin
+- [x] Jetpack Compose
+- [x] GitHub Search Users API
+- [x] Search result list with ID, avatar, login, and useful fields
+- [x] Details navigation and GitHub User Details API
+- [x] Pagination with loading/error/retry/end handling
+- [x] Room last-search persistence and relaunch restoration
+- [x] Meaningful unit/integration tests
+- [x] Clean Git repository and setup documentation
 
 ## Key risks and mitigations
 

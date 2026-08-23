@@ -52,6 +52,20 @@ class SearchViewModelTest {
     }
 
     @Test
+    fun `cached data status exposes timestamp and fresh data clears it`() = runTest {
+        val repository = FakeDeveloperRepository()
+        val viewModel = SearchViewModel(repository)
+
+        repository.dataStatus.value = SearchDataStatus.Cached(cachedAtEpochMillis = 456L)
+        runCurrent()
+        assertEquals(456L, viewModel.uiState.value.cachedAtEpochMillis)
+
+        repository.dataStatus.value = SearchDataStatus.Fresh
+        runCurrent()
+        assertNull(viewModel.uiState.value.cachedAtEpochMillis)
+    }
+
+    @Test
     fun `blank search shows validation error without creating pager`() = runTest {
         val repository = FakeDeveloperRepository()
         val viewModel = SearchViewModel(repository)
@@ -158,8 +172,8 @@ class SearchViewModelTest {
 private class FakeDeveloperRepository(
     private val lastSearch: LastSearch? = null,
 ) : DeveloperRepository {
-    override val searchDataStatus: StateFlow<SearchDataStatus> =
-        MutableStateFlow(SearchDataStatus.Unknown)
+    val dataStatus = MutableStateFlow<SearchDataStatus>(SearchDataStatus.Unknown)
+    override val searchDataStatus: StateFlow<SearchDataStatus> = dataStatus
 
     val pagedQueries = mutableListOf<String>()
 
