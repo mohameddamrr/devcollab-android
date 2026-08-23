@@ -4,6 +4,8 @@ import com.mohamedamr.devcollab.data.github.remote.GitHubDataSource
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubSearchResponseDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubUserDetailDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubUserSummaryDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositoryDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubEventDto
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubApiResult
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRateLimit
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRemoteError
@@ -152,6 +154,32 @@ class DefaultDeveloperRepositoryTest {
         )
     }
 
+    @Test
+    fun `developer repositories trim username and map GitHub evidence`() = runTest {
+        val dataSource = FakeGitHubDataSource(
+            searchResult = emptySearchResult,
+            repositoryResult = GitHubApiResult.Success(
+                data = listOf(testRepositoryDto.copy(description = "   ", language = " Kotlin ")),
+                rateLimit = GitHubRateLimit(),
+            ),
+        )
+
+        val result = DefaultDeveloperRepository(dataSource).getDeveloperRepositories(
+            username = "  octocat  ",
+            page = 2,
+            pageSize = 20,
+        )
+
+        assertEquals("octocat", dataSource.receivedRepositoryUsername)
+        assertEquals(2, dataSource.receivedRepositoryPage)
+        assertEquals(20, dataSource.receivedRepositoryPageSize)
+        val repository = (result as DeveloperRepositoryResult.Success).data.single()
+        assertEquals(1296269L, repository.githubId)
+        assertEquals(null, repository.description)
+        assertEquals("Kotlin", repository.primaryLanguage)
+        assertEquals(80, repository.starCount)
+    }
+
     private companion object {
         val emptySearchResult = GitHubApiResult.Success(
             data = GitHubSearchResponseDto(
@@ -184,17 +212,39 @@ class DefaultDeveloperRepositoryTest {
             createdAt = "2011-01-25T18:44:36Z",
             updatedAt = "2026-01-01T00:00:00Z",
         )
+
+        val testRepositoryDto = GitHubRepositoryDto(
+            id = 1296269L,
+            name = "Hello-World",
+            fullName = "octocat/Hello-World",
+            htmlUrl = "https://github.com/octocat/Hello-World",
+            description = "Example repository",
+            language = "Kotlin",
+            starCount = 80,
+            forkCount = 9,
+            openIssueCount = 2,
+            fork = false,
+            archived = false,
+            disabled = false,
+            updatedAt = "2026-08-20T10:00:00Z",
+            pushedAt = null,
+        )
     }
 }
 
 private class FakeGitHubDataSource(
     private val searchResult: GitHubApiResult<GitHubSearchResponseDto>,
     private val detailResult: GitHubApiResult<GitHubUserDetailDto>? = null,
+    private val repositoryResult: GitHubApiResult<List<GitHubRepositoryDto>>? = null,
+    private val activityResult: GitHubApiResult<List<GitHubEventDto>>? = null,
 ) : GitHubDataSource {
     var receivedQuery: String? = null
     var receivedPage: Int? = null
     var receivedPageSize: Int? = null
     var receivedUsername: String? = null
+    var receivedRepositoryUsername: String? = null
+    var receivedRepositoryPage: Int? = null
+    var receivedRepositoryPageSize: Int? = null
 
     override suspend fun searchUsers(
         query: String,
@@ -211,4 +261,22 @@ private class FakeGitHubDataSource(
         receivedUsername = username
         return checkNotNull(detailResult) { "No detail result configured for this test" }
     }
+
+    override suspend fun getUserRepositories(
+        username: String,
+        page: Int,
+        perPage: Int,
+    ): GitHubApiResult<List<GitHubRepositoryDto>> {
+        receivedRepositoryUsername = username
+        receivedRepositoryPage = page
+        receivedRepositoryPageSize = perPage
+        return checkNotNull(repositoryResult) { "No repository result configured for this test" }
+    }
+
+    override suspend fun getUserPublicEvents(
+        username: String,
+        page: Int,
+        perPage: Int,
+    ): GitHubApiResult<List<GitHubEventDto>> =
+        checkNotNull(activityResult) { "No activity result configured for this test" }
 }

@@ -2,8 +2,9 @@
 
 DevCollab is an Android application that searches for GitHub developers, displays
 paginated results, and opens a detailed public profile. It currently represents the
-complete standalone VOIS internship-assignment baseline. Later phases will evolve it
-into an evidence-based developer collaboration discovery product.
+complete standalone VOIS internship-assignment baseline and now includes the rich
+public GitHub profile delivered in Phase 8. Later phases will add authenticated
+collaboration features.
 
 ## VOIS baseline features
 
@@ -17,6 +18,16 @@ into an evidence-based developer collaboration discovery product.
 - Automatic restoration after the app is closed and reopened
 - Offline cached fallback with a visible stale-data message
 - Unit, networking, Room, Paging, and Compose UI tests
+
+## Rich GitHub profile features
+
+- Overview, Repositories, and Activity tabs
+- Public repository cards with external GitHub links
+- Incremental repository loading plus local search and Recent/Popular/Name sorting
+- Top-repository overview based on stars among repositories loaded so far
+- Repository-language summary based on primary-language repository counts
+- Recent public GitHub activity and a bounded “Most Active Recently” repository summary
+- Pull-to-refresh with independent profile, repository, and activity states
 
 ## Architecture
 
@@ -91,6 +102,9 @@ Run the baseline validation set:
 - GitHub API requests are unauthenticated and therefore have a relatively low rate limit.
 - Cached search results may become stale and are clearly labelled when used offline.
 - Public GitHub data is evidence of public activity, not proof of professional skill.
+- Repository-language percentages count loaded repositories; they are not byte-level
+  language statistics or proficiency scores.
+- Activity uses up to 30 recent public GitHub events and is not lifetime contribution
+  history. GitHub may delay public events and does not expose private activity.
 - Authentication, collaboration profiles, evidence-based discovery, saved developers,
   and collaboration requests belong to later project phases.
-

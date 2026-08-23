@@ -4,6 +4,8 @@ import androidx.paging.PagingData
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
 import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
+import com.mohamedamr.devcollab.domain.model.DeveloperRepositorySummary
+import com.mohamedamr.devcollab.domain.model.DeveloperActivity
 import com.mohamedamr.devcollab.domain.model.LastSearch
 import com.mohamedamr.devcollab.domain.model.SearchDataStatus
 import kotlinx.coroutines.flow.Flow
@@ -25,6 +27,17 @@ interface DeveloperRepository {
     suspend fun getDeveloperProfile(
         username: String,
     ): DeveloperRepositoryResult<DeveloperProfile>
+
+    suspend fun getDeveloperRepositories(
+        username: String,
+        page: Int = 1,
+        pageSize: Int = 30,
+    ): DeveloperRepositoryResult<List<DeveloperRepositorySummary>>
+
+    suspend fun getDeveloperRecentActivity(
+        username: String,
+        pageSize: Int = 30,
+    ): DeveloperRepositoryResult<List<DeveloperActivity>>
 }
 
 sealed interface DeveloperRepositoryResult<out T> {

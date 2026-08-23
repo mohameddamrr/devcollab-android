@@ -4,6 +4,8 @@ import com.mohamedamr.devcollab.data.github.remote.model.GitHubApiResult
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRemoteError
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubSearchResponseDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubUserDetailDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositoryDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubEventDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
@@ -94,6 +96,74 @@ class GitHubRemoteDataSourceTest {
         assertNull(user.location)
         assertFalse(user.isSiteAdmin)
         assertEquals("/users/octocat", server.takeRequest().path)
+    }
+
+    @Test
+    fun `repositories request uses bounded paging and parses optional fields`() = runBlocking {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(REPOSITORIES_RESPONSE_JSON),
+        )
+        val dataSource = createDataSource()
+
+        val result = dataSource.getUserRepositories(
+            username = "octocat",
+            page = 2,
+            perPage = 20,
+        )
+
+        assertTrue(result is GitHubApiResult.Success)
+        val repository = (result as GitHubApiResult.Success).data.single()
+        assertEquals(1296269L, repository.id)
+        assertNull(repository.description)
+        assertEquals("Kotlin", repository.language)
+
+        val request = server.takeRequest()
+        assertEquals("/users/octocat/repos", request.requestUrl?.encodedPath)
+        assertEquals("owner", request.requestUrl?.queryParameter("type"))
+        assertEquals("updated", request.requestUrl?.queryParameter("sort"))
+        assertEquals("desc", request.requestUrl?.queryParameter("direction"))
+        assertEquals("2", request.requestUrl?.queryParameter("page"))
+        assertEquals("20", request.requestUrl?.queryParameter("per_page"))
+    }
+
+    @Test
+    fun `public events request is bounded and preserves event payload evidence`() = runBlocking {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(EVENTS_RESPONSE_JSON),
+        )
+        val dataSource = createDataSource()
+
+        val result = dataSource.getUserPublicEvents("octocat", page = 1, perPage = 30)
+
+        assertTrue(result is GitHubApiResult.Success)
+        val event = (result as GitHubApiResult.Success).data.single()
+        assertEquals("PushEvent", event.type)
+        assertEquals("octocat/Hello-World", event.repo.name)
+        assertEquals("2", event.payload["size"]?.toString())
+        val request = server.takeRequest()
+        assertEquals("/users/octocat/events/public", request.requestUrl?.encodedPath)
+        assertEquals("1", request.requestUrl?.queryParameter("page"))
+        assertEquals("30", request.requestUrl?.queryParameter("per_page"))
+    }
+
+    @Test
+    fun `invalid repository page size is rejected before request`() {
+        val dataSource = createDataSource()
+
+        val error = runCatching {
+            runBlocking {
+                dataSource.getUserRepositories("octocat", page = 1, perPage = 101)
+            }
+        }.exceptionOrNull()
+
+        assertTrue(error is IllegalArgumentException)
+        assertEquals(0, server.requestCount)
     }
 
     @Test
@@ -234,6 +304,21 @@ class GitHubRemoteDataSourceTest {
             override suspend fun getUser(
                 username: String,
             ): Response<GitHubUserDetailDto> = throw CancellationException("cancelled")
+
+            override suspend fun getUserRepositories(
+                username: String,
+                type: String,
+                sort: String,
+                direction: String,
+                page: Int,
+                perPage: Int,
+            ): Response<List<GitHubRepositoryDto>> = throw CancellationException("cancelled")
+
+            override suspend fun getUserPublicEvents(
+                username: String,
+                page: Int,
+                perPage: Int,
+            ): Response<List<GitHubEventDto>> = throw CancellationException("cancelled")
         }
         val dataSource = GitHubRemoteDataSource(cancellingService)
 
@@ -296,6 +381,41 @@ class GitHubRemoteDataSourceTest {
               "created_at": "2011-01-25T18:44:36Z",
               "updated_at": "2026-01-01T00:00:00Z"
             }
+        """.trimIndent()
+
+        private val REPOSITORIES_RESPONSE_JSON = """
+            [
+              {
+                "id": 1296269,
+                "name": "Hello-World",
+                "full_name": "octocat/Hello-World",
+                "html_url": "https://github.com/octocat/Hello-World",
+                "description": null,
+                "language": "Kotlin",
+                "stargazers_count": 80,
+                "forks_count": 9,
+                "open_issues_count": 2,
+                "fork": false,
+                "archived": false,
+                "disabled": false,
+                "updated_at": "2026-08-20T10:00:00Z",
+                "pushed_at": null,
+                "unknown_future_field": "ignored"
+              }
+            ]
+        """.trimIndent()
+
+        private val EVENTS_RESPONSE_JSON = """
+            [
+              {
+                "id": "event-1",
+                "type": "PushEvent",
+                "repo": { "id": 1, "name": "octocat/Hello-World" },
+                "payload": { "size": 2 },
+                "public": true,
+                "created_at": "2026-08-24T10:00:00Z"
+              }
+            ]
         """.trimIndent()
 
         private val ERROR_RESPONSE_JSON = """

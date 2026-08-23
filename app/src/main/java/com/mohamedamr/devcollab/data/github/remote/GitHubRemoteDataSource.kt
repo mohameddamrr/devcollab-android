@@ -3,6 +3,8 @@ package com.mohamedamr.devcollab.data.github.remote
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubErrorResponseDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubSearchResponseDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubUserDetailDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositoryDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubEventDto
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubApiResult
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRateLimit
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRemoteError
@@ -39,6 +41,46 @@ class GitHubRemoteDataSource(
     override suspend fun getUser(username: String): GitHubApiResult<GitHubUserDetailDto> {
         require(username.isNotBlank()) { "Username must not be blank." }
         return executeRequest { apiService.getUser(username) }
+    }
+
+    override suspend fun getUserRepositories(
+        username: String,
+        page: Int,
+        perPage: Int,
+    ): GitHubApiResult<List<GitHubRepositoryDto>> {
+        require(username.isNotBlank()) { "Username must not be blank." }
+        require(page >= GitHubApiService.DEFAULT_PAGE) { "Page must be at least 1." }
+        require(perPage in 1..GitHubApiService.MAX_PAGE_SIZE) {
+            "Page size must be between 1 and ${GitHubApiService.MAX_PAGE_SIZE}."
+        }
+
+        return executeRequest {
+            apiService.getUserRepositories(
+                username = username,
+                page = page,
+                perPage = perPage,
+            )
+        }
+    }
+
+    override suspend fun getUserPublicEvents(
+        username: String,
+        page: Int,
+        perPage: Int,
+    ): GitHubApiResult<List<GitHubEventDto>> {
+        require(username.isNotBlank()) { "Username must not be blank." }
+        require(page >= GitHubApiService.DEFAULT_PAGE) { "Page must be at least 1." }
+        require(perPage in 1..GitHubApiService.MAX_PAGE_SIZE) {
+            "Page size must be between 1 and ${GitHubApiService.MAX_PAGE_SIZE}."
+        }
+
+        return executeRequest {
+            apiService.getUserPublicEvents(
+                username = username,
+                page = page,
+                perPage = perPage,
+            )
+        }
     }
 
     private suspend fun <T> executeRequest(

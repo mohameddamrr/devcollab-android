@@ -4,6 +4,8 @@ import androidx.paging.PagingData
 import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
+import com.mohamedamr.devcollab.domain.model.DeveloperRepositorySummary
+import com.mohamedamr.devcollab.domain.model.DeveloperActivity
 import com.mohamedamr.devcollab.domain.model.LastSearch
 import com.mohamedamr.devcollab.domain.model.SearchDataStatus
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
@@ -193,4 +195,17 @@ private class FakeDeveloperRepository(
     override suspend fun getDeveloperProfile(
         username: String,
     ): DeveloperRepositoryResult<DeveloperProfile> = error("Not needed by ViewModel tests")
+
+    override suspend fun getDeveloperRepositories(
+        username: String,
+        page: Int,
+        pageSize: Int,
+    ): DeveloperRepositoryResult<List<DeveloperRepositorySummary>> =
+        error("Not needed by ViewModel tests")
+
+    override suspend fun getDeveloperRecentActivity(
+        username: String,
+        pageSize: Int,
+    ): DeveloperRepositoryResult<List<DeveloperActivity>> =
+        error("Not needed by ViewModel tests")
 }

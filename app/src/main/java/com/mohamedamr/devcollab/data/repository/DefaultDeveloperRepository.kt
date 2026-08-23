@@ -6,6 +6,8 @@ import androidx.paging.PagingData
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.map
 import com.mohamedamr.devcollab.data.github.mapper.toDomain
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositoryDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubEventDto
 import com.mohamedamr.devcollab.data.github.remote.GitHubDataSource
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubApiResult
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRemoteError
@@ -14,6 +16,8 @@ import com.mohamedamr.devcollab.data.local.mapper.toDomain
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
 import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
+import com.mohamedamr.devcollab.domain.model.DeveloperRepositorySummary
+import com.mohamedamr.devcollab.domain.model.DeveloperActivity
 import com.mohamedamr.devcollab.domain.model.LastSearch
 import com.mohamedamr.devcollab.domain.model.SearchDataStatus
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
@@ -95,6 +99,41 @@ class DefaultDeveloperRepository(
     ): DeveloperRepositoryResult<DeveloperProfile> =
         when (val result = remoteDataSource.getUser(username.trim())) {
             is GitHubApiResult.Success -> DeveloperRepositoryResult.Success(result.data.toDomain())
+            is GitHubApiResult.Failure -> DeveloperRepositoryResult.Failure(result.error.toDomain())
+        }
+
+    override suspend fun getDeveloperRepositories(
+        username: String,
+        page: Int,
+        pageSize: Int,
+    ): DeveloperRepositoryResult<List<DeveloperRepositorySummary>> =
+        when (
+            val result = remoteDataSource.getUserRepositories(
+                username = username.trim(),
+                page = page,
+                perPage = pageSize,
+            )
+        ) {
+            is GitHubApiResult.Success -> DeveloperRepositoryResult.Success(
+                result.data.map(GitHubRepositoryDto::toDomain),
+            )
+            is GitHubApiResult.Failure -> DeveloperRepositoryResult.Failure(result.error.toDomain())
+        }
+
+    override suspend fun getDeveloperRecentActivity(
+        username: String,
+        pageSize: Int,
+    ): DeveloperRepositoryResult<List<DeveloperActivity>> =
+        when (
+            val result = remoteDataSource.getUserPublicEvents(
+                username = username.trim(),
+                page = 1,
+                perPage = pageSize,
+            )
+        ) {
+            is GitHubApiResult.Success -> DeveloperRepositoryResult.Success(
+                result.data.map(GitHubEventDto::toDomain),
+            )
             is GitHubApiResult.Failure -> DeveloperRepositoryResult.Failure(result.error.toDomain())
         }
 

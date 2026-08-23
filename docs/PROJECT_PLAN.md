@@ -315,13 +315,16 @@ verification complete.**
 
 Complete ViewModel, repository, DAO, and paging tests. Demonstrate and freeze the
 standalone VOIS baseline before advanced product work.
-**Status: implementation and automated emulator validation complete; awaiting the
-phase explanation and user-approved Git checkpoint.**
+**Status: complete, validated, documented, and committed as the protected VOIS
+baseline.**
 
 ### Phase 8 - Rich GitHub profile
 
 Add Overview/Repositories/Activity tabs, top repositories, repository sorting/search,
 recent events, bounded language summaries, pull-to-refresh, and caching.
+**Status: implementation, focused JVM tests, lint, build, and manual feature checks
+complete. Rich profile data remains network-backed in this phase; bounded Room caching
+can be added during offline polish without changing the MVVM contracts.**
 
 ### Phase 9 - GitHub authentication
 
