@@ -308,6 +308,8 @@ and end-of-results. Begin with remote paging instead of an early `RemoteMediator
 
 Persist and restore the last successful query and ordered results. Demonstrate full
 app close/reopen behavior, then add recent searches/recently viewed where appropriate.
+**Status: implementation, automated validation, and manual offline restoration
+verification complete.**
 
 ### Phase 7 - VOIS tests and protected checkpoint
 

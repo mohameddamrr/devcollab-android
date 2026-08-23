@@ -4,9 +4,16 @@ import androidx.paging.PagingData
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
 import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
+import com.mohamedamr.devcollab.domain.model.LastSearch
+import com.mohamedamr.devcollab.domain.model.SearchDataStatus
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 interface DeveloperRepository {
+    val searchDataStatus: StateFlow<SearchDataStatus>
+
+    suspend fun getLastSearch(): LastSearch?
+
     fun getPagedDevelopers(query: String): Flow<PagingData<DeveloperSummary>>
 
     suspend fun searchDevelopers(

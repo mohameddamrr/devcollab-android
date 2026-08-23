@@ -5,6 +5,8 @@ import com.mohamedamr.devcollab.domain.model.DeveloperAccountType
 import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
+import com.mohamedamr.devcollab.domain.model.LastSearch
+import com.mohamedamr.devcollab.domain.model.SearchDataStatus
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryResult
@@ -12,6 +14,8 @@ import com.mohamedamr.devcollab.testutil.MainDispatcherRule
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -172,6 +176,11 @@ private class FakeDetailsRepository(
         error("No details result configured")
     },
 ) : DeveloperRepository {
+    override val searchDataStatus: StateFlow<SearchDataStatus> =
+        MutableStateFlow(SearchDataStatus.Unknown)
+
+    override suspend fun getLastSearch(): LastSearch? = null
+
     override fun getPagedDevelopers(query: String): Flow<PagingData<DeveloperSummary>> =
         flowOf(PagingData.empty())
 

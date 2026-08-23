@@ -56,6 +56,8 @@ import com.mohamedamr.devcollab.R
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
 import com.mohamedamr.devcollab.domain.model.DeveloperAccountType
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
 fun DiscoverRoute(
@@ -137,6 +139,25 @@ fun DiscoverScreen(
         )
         Spacer(Modifier.height(16.dp))
 
+        uiState.cachedAtEpochMillis?.let { cachedAt ->
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.search_cached_results,
+                        cachedAt.toDisplayDateTime(),
+                    ),
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
         SearchResultContent(
             uiState = uiState,
             developers = developers,
@@ -144,6 +165,12 @@ fun DiscoverScreen(
             modifier = Modifier.weight(1f),
         )
     }
+}
+
+private fun Long.toDisplayDateTime(): String = if (this > 0L) {
+    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(this))
+} else {
+    "—"
 }
 
 @Composable

@@ -4,12 +4,16 @@ import androidx.paging.PagingData
 import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
+import com.mohamedamr.devcollab.domain.model.LastSearch
+import com.mohamedamr.devcollab.domain.model.SearchDataStatus
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryResult
 import com.mohamedamr.devcollab.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -25,6 +29,27 @@ import org.junit.Test
 class SearchViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun `last search is restored and paged when ViewModel starts`() = runTest {
+        val repository = FakeDeveloperRepository(
+            lastSearch = LastSearch(
+                query = "kotlin",
+                totalCount = 40,
+                lastSearchedAtEpochMillis = 123L,
+            ),
+        )
+        val viewModel = SearchViewModel(repository)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.pagingData.collect {}
+        }
+
+        runCurrent()
+
+        assertEquals("kotlin", viewModel.uiState.value.query)
+        assertEquals(true, viewModel.uiState.value.hasSubmittedSearch)
+        assertEquals(listOf("kotlin"), repository.pagedQueries)
+    }
 
     @Test
     fun `blank search shows validation error without creating pager`() = runTest {
@@ -130,8 +155,15 @@ class SearchViewModelTest {
     }
 }
 
-private class FakeDeveloperRepository : DeveloperRepository {
+private class FakeDeveloperRepository(
+    private val lastSearch: LastSearch? = null,
+) : DeveloperRepository {
+    override val searchDataStatus: StateFlow<SearchDataStatus> =
+        MutableStateFlow(SearchDataStatus.Unknown)
+
     val pagedQueries = mutableListOf<String>()
+
+    override suspend fun getLastSearch(): LastSearch? = lastSearch
 
     override fun getPagedDevelopers(query: String): Flow<PagingData<DeveloperSummary>> {
         pagedQueries += query

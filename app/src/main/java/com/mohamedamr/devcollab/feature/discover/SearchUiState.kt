@@ -4,6 +4,7 @@ data class SearchUiState(
     val query: String = "",
     val hasSubmittedSearch: Boolean = false,
     val validationError: SearchValidationError? = null,
+    val cachedAtEpochMillis: Long? = null,
 )
 
 sealed interface SearchValidationError {

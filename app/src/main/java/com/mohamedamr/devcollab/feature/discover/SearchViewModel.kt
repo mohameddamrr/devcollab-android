@@ -6,6 +6,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
+import com.mohamedamr.devcollab.domain.model.SearchDataStatus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -38,6 +39,25 @@ class SearchViewModel(
 
     private var debounceJob: Job? = null
     private var requestId = 0L
+
+    init {
+        viewModelScope.launch {
+            developerRepository.searchDataStatus.collect { status ->
+                _uiState.update { state ->
+                    state.copy(
+                        cachedAtEpochMillis = (status as? SearchDataStatus.Cached)
+                            ?.cachedAtEpochMillis,
+                    )
+                }
+            }
+        }
+        viewModelScope.launch {
+            developerRepository.getLastSearch()?.let { lastSearch ->
+                _uiState.value = SearchUiState(query = lastSearch.query)
+                submitSearch()
+            }
+        }
+    }
 
     fun onQueryChanged(query: String) {
         if (query == _uiState.value.query) return

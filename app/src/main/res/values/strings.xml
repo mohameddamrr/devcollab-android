@@ -12,6 +12,7 @@
     <string name="search_action">Search</string>
     <string name="search_initial_message">Enter a query to discover GitHub developers.</string>
     <string name="search_loading">Searching GitHub developers</string>
+    <string name="search_cached_results">Showing cached results • Saved %1$s</string>
     <string name="search_empty_message">No developers found. Try a different search.</string>
     <plurals name="search_result_count">
         <item quantity="one">%,d matching developer</item>
