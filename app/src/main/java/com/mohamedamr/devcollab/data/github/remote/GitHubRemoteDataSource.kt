@@ -15,11 +15,11 @@ import java.io.IOException
 class GitHubRemoteDataSource(
     private val apiService: GitHubApiService,
     private val json: Json = githubJson,
-) {
-    suspend fun searchUsers(
+) : GitHubDataSource {
+    override suspend fun searchUsers(
         query: String,
-        page: Int = GitHubApiService.DEFAULT_PAGE,
-        perPage: Int = GitHubApiService.DEFAULT_PAGE_SIZE,
+        page: Int,
+        perPage: Int,
     ): GitHubApiResult<GitHubSearchResponseDto> {
         require(query.isNotBlank()) { "Search query must not be blank." }
         require(page >= GitHubApiService.DEFAULT_PAGE) { "Page must be at least 1." }
@@ -36,7 +36,7 @@ class GitHubRemoteDataSource(
         }
     }
 
-    suspend fun getUser(username: String): GitHubApiResult<GitHubUserDetailDto> {
+    override suspend fun getUser(username: String): GitHubApiResult<GitHubUserDetailDto> {
         require(username.isNotBlank()) { "Username must not be blank." }
         return executeRequest { apiService.getUser(username) }
     }

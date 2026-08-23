@@ -15,9 +15,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.mohamedamr.devcollab.app.navigation.AppDestination
 import com.mohamedamr.devcollab.app.navigation.AppNavigation
+import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 
 @Composable
-fun DevCollabApp(modifier: Modifier = Modifier) {
+fun DevCollabApp(
+    developerRepository: DeveloperRepository,
+    modifier: Modifier = Modifier,
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -57,6 +61,7 @@ fun DevCollabApp(modifier: Modifier = Modifier) {
         AppNavigation(
             navController = navController,
             contentPadding = innerPadding,
+            developerRepository = developerRepository,
         )
     }
 }

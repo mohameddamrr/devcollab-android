@@ -281,12 +281,13 @@ complete, including installation and navigation verification on the emulator.**
 
 Add Internet permission, Retrofit/OkHttp/serialization, GitHub headers, DTOs, search and
 detail endpoints, typed failures/rate-limit metadata, and focused API tests. **Status:
-implementation and automated validation complete; awaiting commit approval.**
+complete and committed.**
 
 ### Phase 3 - Core MVVM search
 
 Build the first vertical slice: repository, immutable search state, ViewModel, search
-UI, result cards, and initial/loading/success/empty/error behavior.
+UI, result cards, and initial/loading/success/empty/error behavior. **Status:
+implementation and automated validation complete; awaiting commit approval.**
 
 ### Phase 4 - Developer details
 
