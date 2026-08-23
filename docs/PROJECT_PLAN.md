@@ -287,12 +287,16 @@ complete and committed.**
 
 Build the first vertical slice: repository, immutable search state, ViewModel, search
 UI, result cards, and initial/loading/success/empty/error behavior. **Status:
-implementation and automated validation complete; awaiting commit approval.**
+complete and committed. Search now also starts automatically after the user pauses
+typing, using a rate-limit-conscious debounce.**
 
 ### Phase 4 - Developer details
 
 Navigate from results, call `/users/{username}`, show nullable-safe rich details, and
 support native open/share actions. Mandatory VOIS behavior is now functional.
+**Status: implementation and local automated validation complete; awaiting commit
+approval. The connected emulator suite is compiled, but the current emulator image
+crashes its instrumentation process intermittently.**
 
 ### Phase 5 - Pagination
 

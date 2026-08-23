@@ -5,6 +5,7 @@ import com.mohamedamr.devcollab.data.github.remote.GitHubDataSource
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubApiResult
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRemoteError
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
+import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryResult
@@ -24,6 +25,14 @@ class DefaultDeveloperRepository(
                 perPage = pageSize,
             )
         ) {
+            is GitHubApiResult.Success -> DeveloperRepositoryResult.Success(result.data.toDomain())
+            is GitHubApiResult.Failure -> DeveloperRepositoryResult.Failure(result.error.toDomain())
+        }
+
+    override suspend fun getDeveloperProfile(
+        username: String,
+    ): DeveloperRepositoryResult<DeveloperProfile> =
+        when (val result = remoteDataSource.getUser(username.trim())) {
             is GitHubApiResult.Success -> DeveloperRepositoryResult.Success(result.data.toDomain())
             is GitHubApiResult.Failure -> DeveloperRepositoryResult.Failure(result.error.toDomain())
         }

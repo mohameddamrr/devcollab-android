@@ -35,6 +35,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +54,7 @@ import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 @Composable
 fun DiscoverRoute(
     developerRepository: DeveloperRepository,
+    onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val searchViewModel: SearchViewModel = viewModel(
@@ -64,6 +66,7 @@ fun DiscoverRoute(
         uiState = uiState,
         onQueryChanged = searchViewModel::onQueryChanged,
         onSearch = searchViewModel::search,
+        onDeveloperClick = onDeveloperClick,
         modifier = modifier,
     )
 }
@@ -73,6 +76,7 @@ fun DiscoverScreen(
     uiState: SearchUiState,
     onQueryChanged: (String) -> Unit,
     onSearch: () -> Unit,
+    onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -127,6 +131,7 @@ fun DiscoverScreen(
         SearchResultContent(
             result = uiState.result,
             onRetry = submitSearch,
+            onDeveloperClick = onDeveloperClick,
             modifier = Modifier.weight(1f),
         )
     }
@@ -136,6 +141,7 @@ fun DiscoverScreen(
 private fun SearchResultContent(
     result: SearchResultUiState,
     onRetry: () -> Unit,
+    onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (result) {
@@ -166,6 +172,7 @@ private fun SearchResultContent(
         )
         is SearchResultUiState.Success -> DeveloperResults(
             result = result,
+            onDeveloperClick = onDeveloperClick,
             modifier = modifier,
         )
     }
@@ -174,6 +181,7 @@ private fun SearchResultContent(
 @Composable
 private fun DeveloperResults(
     result: SearchResultUiState.Success,
+    onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -182,13 +190,20 @@ private fun DeveloperResults(
     ) {
         item {
             Text(
-                text = stringResource(R.string.search_result_count, result.totalCount),
+                text = pluralStringResource(
+                    R.plurals.search_result_count,
+                    result.totalCount,
+                    result.totalCount,
+                ),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         items(items = result.developers, key = DeveloperSummary::githubId) { developer ->
-            DeveloperResultCard(developer = developer)
+            DeveloperResultCard(
+                developer = developer,
+                onClick = { onDeveloperClick(developer.login) },
+            )
         }
     }
 }
@@ -196,9 +211,13 @@ private fun DeveloperResults(
 @Composable
 private fun DeveloperResultCard(
     developer: DeveloperSummary,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ElevatedCard(modifier = modifier.fillMaxWidth()) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+    ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,

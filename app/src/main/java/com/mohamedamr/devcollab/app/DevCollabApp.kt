@@ -25,11 +25,14 @@ fun DevCollabApp(
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+    val showBottomNavigation = AppDestination.topLevelDestinations.any { destination ->
+        currentDestination?.hierarchy?.any { it.route == destination.route } == true
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar {
+            if (showBottomNavigation) NavigationBar {
                 AppDestination.topLevelDestinations.forEach { destination ->
                     val selected = currentDestination?.hierarchy?.any {
                         it.route == destination.route

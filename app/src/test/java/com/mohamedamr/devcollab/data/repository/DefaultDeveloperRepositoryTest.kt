@@ -103,14 +103,98 @@ class DefaultDeveloperRepositoryTest {
         val page = (result as DeveloperRepositoryResult.Success).data
         assertEquals(DeveloperAccountType.Unknown, page.developers.single().accountType)
     }
+
+    @Test
+    fun `developer details trim username and map optional profile fields`() = runTest {
+        val dataSource = FakeGitHubDataSource(
+            searchResult = emptySearchResult,
+            detailResult = GitHubApiResult.Success(
+                data = testDetailDto.copy(
+                    name = "  The Octocat  ",
+                    company = "   ",
+                    blog = " https://github.blog ",
+                ),
+                rateLimit = GitHubRateLimit(),
+            ),
+        )
+
+        val result = DefaultDeveloperRepository(dataSource)
+            .getDeveloperProfile("  octocat  ")
+
+        assertEquals("octocat", dataSource.receivedUsername)
+        val profile = (result as DeveloperRepositoryResult.Success).data
+        assertEquals("The Octocat", profile.name)
+        assertEquals(null, profile.company)
+        assertEquals("https://github.blog", profile.websiteUrl)
+        assertEquals(8, profile.publicRepositoryCount)
+    }
+
+    @Test
+    fun `developer details translate server failure`() = runTest {
+        val dataSource = FakeGitHubDataSource(
+            searchResult = emptySearchResult,
+            detailResult = GitHubApiResult.Failure(
+                GitHubRemoteError.Http(
+                    statusCode = 404,
+                    message = "Not Found",
+                    rateLimit = GitHubRateLimit(),
+                ),
+            ),
+        )
+
+        val result = DefaultDeveloperRepository(dataSource).getDeveloperProfile("missing")
+
+        assertEquals(
+            DeveloperRepositoryResult.Failure(
+                DeveloperRepositoryError.Server(statusCode = 404, message = "Not Found"),
+            ),
+            result,
+        )
+    }
+
+    private companion object {
+        val emptySearchResult = GitHubApiResult.Success(
+            data = GitHubSearchResponseDto(
+                totalCount = 0,
+                incompleteResults = false,
+                items = emptyList(),
+            ),
+            rateLimit = GitHubRateLimit(),
+        )
+
+        val testDetailDto = GitHubUserDetailDto(
+            login = "octocat",
+            id = 1L,
+            avatarUrl = "avatar",
+            htmlUrl = "https://github.com/octocat",
+            type = "User",
+            isSiteAdmin = false,
+            name = "The Octocat",
+            company = "GitHub",
+            blog = "https://github.blog",
+            location = "San Francisco",
+            email = null,
+            hireable = true,
+            bio = "GitHub mascot",
+            twitterUsername = null,
+            publicRepositoryCount = 8,
+            publicGistCount = 2,
+            followers = 20,
+            following = 5,
+            createdAt = "2011-01-25T18:44:36Z",
+            updatedAt = "2026-01-01T00:00:00Z",
+        )
+    }
 }
 
 private class FakeGitHubDataSource(
     private val searchResult: GitHubApiResult<GitHubSearchResponseDto>,
+    private val detailResult: GitHubApiResult<GitHubUserDetailDto>? = null,
 ) : GitHubDataSource {
     var receivedQuery: String? = null
     var receivedPage: Int? = null
     var receivedPageSize: Int? = null
+    var receivedUsername: String? = null
 
     override suspend fun searchUsers(
         query: String,
@@ -123,6 +207,8 @@ private class FakeGitHubDataSource(
         return searchResult
     }
 
-    override suspend fun getUser(username: String): GitHubApiResult<GitHubUserDetailDto> =
-        error("Not needed by these tests")
+    override suspend fun getUser(username: String): GitHubApiResult<GitHubUserDetailDto> {
+        receivedUsername = username
+        return checkNotNull(detailResult) { "No detail result configured for this test" }
+    }
 }

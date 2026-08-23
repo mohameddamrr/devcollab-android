@@ -1,5 +1,6 @@
 package com.mohamedamr.devcollab.app.navigation
 
+import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -41,4 +42,11 @@ sealed class AppDestination(
     companion object {
         val topLevelDestinations = listOf(Discover, Requests, Saved, Profile)
     }
+}
+
+object DeveloperDetailsDestination {
+    const val usernameArgument = "username"
+    const val route = "developer/{$usernameArgument}"
+
+    fun createRoute(username: String): String = "developer/${Uri.encode(username)}"
 }

@@ -29,6 +29,7 @@ class DiscoverScreenTest {
                     uiState = SearchUiState(),
                     onQueryChanged = { queryChange = it },
                     onSearch = { searchClicked = true },
+                    onDeveloperClick = {},
                 )
             }
         }
@@ -42,6 +43,7 @@ class DiscoverScreenTest {
 
     @Test
     fun successStateDisplaysDeveloperEvidence() {
+        var selectedUsername: String? = null
         composeRule.setContent {
             DevCollabTheme {
                 DiscoverScreen(
@@ -54,6 +56,7 @@ class DiscoverScreenTest {
                     ),
                     onQueryChanged = {},
                     onSearch = {},
+                    onDeveloperClick = { selectedUsername = it },
                 )
             }
         }
@@ -62,6 +65,8 @@ class DiscoverScreenTest {
         composeRule.onNodeWithText("@octocat").assertIsDisplayed()
         composeRule.onNodeWithText("GitHub ID: 1").assertIsDisplayed()
         composeRule.onNodeWithText("User").assertIsDisplayed()
+        composeRule.onNodeWithText("@octocat").performClick()
+        assertEquals("octocat", selectedUsername)
     }
 
     @Test
@@ -78,6 +83,7 @@ class DiscoverScreenTest {
                     ),
                     onQueryChanged = {},
                     onSearch = { retried = true },
+                    onDeveloperClick = {},
                 )
             }
         }

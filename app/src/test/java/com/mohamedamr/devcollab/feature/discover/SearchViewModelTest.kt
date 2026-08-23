@@ -2,6 +2,7 @@ package com.mohamedamr.devcollab.feature.discover
 
 import com.mohamedamr.devcollab.domain.model.DeveloperAccountType
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
+import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError
@@ -11,8 +12,12 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.advanceTimeBy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -43,6 +48,53 @@ class SearchViewModelTest {
             viewModel.uiState.value.result,
         )
         assertEquals(0, repository.callCount)
+    }
+
+    @Test
+    fun `typing automatically searches after debounce interval`() = runTest {
+        val repository = FakeDeveloperRepository()
+        val viewModel = SearchViewModel(repository)
+
+        viewModel.onQueryChanged("octocat")
+        advanceTimeBy(SEARCH_DEBOUNCE_MILLIS - 1)
+        runCurrent()
+        assertEquals(0, repository.callCount)
+
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(1, repository.callCount)
+        assertEquals("octocat", repository.lastQuery)
+    }
+
+    @Test
+    fun `rapid typing searches only the latest query`() = runTest {
+        val repository = FakeDeveloperRepository()
+        val viewModel = SearchViewModel(repository)
+
+        viewModel.onQueryChanged("oct")
+        advanceTimeBy(300)
+        viewModel.onQueryChanged("octocat")
+        advanceTimeBy(SEARCH_DEBOUNCE_MILLIS)
+        runCurrent()
+
+        assertEquals(1, repository.callCount)
+        assertEquals("octocat", repository.lastQuery)
+    }
+
+    @Test
+    fun `short query waits for explicit search`() = runTest {
+        val repository = FakeDeveloperRepository()
+        val viewModel = SearchViewModel(repository)
+
+        viewModel.onQueryChanged("ab")
+        advanceTimeBy(SEARCH_DEBOUNCE_MILLIS)
+        runCurrent()
+        assertEquals(0, repository.callCount)
+
+        viewModel.search()
+        runCurrent()
+        assertEquals(1, repository.callCount)
+        assertEquals("ab", repository.lastQuery)
     }
 
     @Test
@@ -202,6 +254,54 @@ class SearchViewModelTest {
         assertEquals(SearchResultUiState.Initial, viewModel.uiState.value.result)
     }
 
+    @Test
+    fun `non cooperative old request cannot overwrite newer query`() = runTest {
+        val firstResult = CompletableDeferred<DeveloperRepositoryResult<DeveloperSearchPage>>()
+        val secondResult = CompletableDeferred<DeveloperRepositoryResult<DeveloperSearchPage>>()
+        val repository = FakeDeveloperRepository { query ->
+            when (query) {
+                "first" -> try {
+                    firstResult.await()
+                } catch (_: CancellationException) {
+                    withContext(NonCancellable) { firstResult.await() }
+                }
+                "second" -> secondResult.await()
+                else -> error("Unexpected query: $query")
+            }
+        }
+        val viewModel = SearchViewModel(repository)
+        viewModel.onQueryChanged("first")
+        viewModel.search()
+        runCurrent()
+        viewModel.onQueryChanged("second")
+        viewModel.search()
+        runCurrent()
+
+        secondResult.complete(
+            DeveloperRepositoryResult.Success(
+                DeveloperSearchPage(
+                    developers = listOf(testDeveloper.copy(login = "second")),
+                    totalCount = 1,
+                    isIncomplete = false,
+                ),
+            ),
+        )
+        runCurrent()
+        firstResult.complete(
+            DeveloperRepositoryResult.Success(
+                DeveloperSearchPage(
+                    developers = listOf(testDeveloper.copy(login = "first")),
+                    totalCount = 1,
+                    isIncomplete = false,
+                ),
+            ),
+        )
+        runCurrent()
+
+        val success = viewModel.uiState.value.result as SearchResultUiState.Success
+        assertEquals("second", success.developers.single().login)
+    }
+
     private companion object {
         val testDeveloper = DeveloperSummary(
             githubId = 1L,
@@ -240,4 +340,8 @@ private class FakeDeveloperRepository(
             }
         }
     }
+
+    override suspend fun getDeveloperProfile(
+        username: String,
+    ): DeveloperRepositoryResult<DeveloperProfile> = error("Not needed by search tests")
 }

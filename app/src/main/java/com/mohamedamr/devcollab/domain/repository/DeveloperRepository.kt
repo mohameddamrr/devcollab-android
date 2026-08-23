@@ -1,6 +1,7 @@
 package com.mohamedamr.devcollab.domain.repository
 
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
+import com.mohamedamr.devcollab.domain.model.DeveloperProfile
 
 interface DeveloperRepository {
     suspend fun searchDevelopers(
@@ -8,6 +9,10 @@ interface DeveloperRepository {
         page: Int = 1,
         pageSize: Int = 30,
     ): DeveloperRepositoryResult<DeveloperSearchPage>
+
+    suspend fun getDeveloperProfile(
+        username: String,
+    ): DeveloperRepositoryResult<DeveloperProfile>
 }
 
 sealed interface DeveloperRepositoryResult<out T> {

@@ -7,11 +7,14 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.mohamedamr.devcollab.feature.myprofile.MyProfileScreen
 import com.mohamedamr.devcollab.feature.requests.RequestsScreen
 import com.mohamedamr.devcollab.feature.saved.SavedScreen
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 import com.mohamedamr.devcollab.feature.discover.DiscoverRoute
+import com.mohamedamr.devcollab.feature.developerdetails.DeveloperDetailsRoute
 
 @Composable
 fun AppNavigation(
@@ -26,7 +29,29 @@ fun AppNavigation(
         modifier = modifier.padding(contentPadding),
     ) {
         composable(AppDestination.Discover.route) {
-            DiscoverRoute(developerRepository = developerRepository)
+            DiscoverRoute(
+                developerRepository = developerRepository,
+                onDeveloperClick = { username ->
+                    navController.navigate(DeveloperDetailsDestination.createRoute(username))
+                },
+            )
+        }
+        composable(
+            route = DeveloperDetailsDestination.route,
+            arguments = listOf(
+                navArgument(DeveloperDetailsDestination.usernameArgument) {
+                    type = NavType.StringType
+                },
+            ),
+        ) { backStackEntry ->
+            val username = backStackEntry.arguments
+                ?.getString(DeveloperDetailsDestination.usernameArgument)
+                .orEmpty()
+            DeveloperDetailsRoute(
+                username = username,
+                developerRepository = developerRepository,
+                onBack = navController::navigateUp,
+            )
         }
         composable(AppDestination.Requests.route) { RequestsScreen() }
         composable(AppDestination.Saved.route) { SavedScreen() }
