@@ -1,25 +1,13 @@
 package com.mohamedamr.devcollab.feature.discover
 
-import com.mohamedamr.devcollab.domain.model.DeveloperSummary
-
 data class SearchUiState(
     val query: String = "",
-    val result: SearchResultUiState = SearchResultUiState.Initial,
+    val hasSubmittedSearch: Boolean = false,
+    val validationError: SearchValidationError? = null,
 )
 
-sealed interface SearchResultUiState {
-    data object Initial : SearchResultUiState
-
-    data object Loading : SearchResultUiState
-
-    data class Success(
-        val developers: List<DeveloperSummary>,
-        val totalCount: Int,
-    ) : SearchResultUiState
-
-    data object Empty : SearchResultUiState
-
-    data class Error(val reason: SearchErrorReason) : SearchResultUiState
+sealed interface SearchValidationError {
+    data object EmptyQuery : SearchValidationError
 }
 
 sealed interface SearchErrorReason {

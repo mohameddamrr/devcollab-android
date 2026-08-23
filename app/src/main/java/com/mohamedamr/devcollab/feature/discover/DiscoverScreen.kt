@@ -45,6 +45,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
+import androidx.paging.PagingData
+import kotlinx.coroutines.flow.Flow
 import coil3.compose.AsyncImage
 import com.mohamedamr.devcollab.R
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
@@ -64,6 +70,7 @@ fun DiscoverRoute(
 
     DiscoverScreen(
         uiState = uiState,
+        pagingData = searchViewModel.pagingData,
         onQueryChanged = searchViewModel::onQueryChanged,
         onSearch = searchViewModel::search,
         onDeveloperClick = onDeveloperClick,
@@ -74,12 +81,14 @@ fun DiscoverRoute(
 @Composable
 fun DiscoverScreen(
     uiState: SearchUiState,
+    pagingData: Flow<PagingData<DeveloperSummary>>,
     onQueryChanged: (String) -> Unit,
     onSearch: () -> Unit,
     onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
+    val developers = pagingData.collectAsLazyPagingItems()
     val submitSearch = {
         onSearch()
         keyboardController?.hide()
@@ -117,7 +126,7 @@ fun DiscoverScreen(
             trailingIcon = {
                 IconButton(
                     onClick = submitSearch,
-                    enabled = uiState.result !is SearchResultUiState.Loading,
+                    enabled = developers.loadState.refresh !is LoadState.Loading,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -129,8 +138,8 @@ fun DiscoverScreen(
         Spacer(Modifier.height(16.dp))
 
         SearchResultContent(
-            result = uiState.result,
-            onRetry = submitSearch,
+            uiState = uiState,
+            developers = developers,
             onDeveloperClick = onDeveloperClick,
             modifier = Modifier.weight(1f),
         )
@@ -139,17 +148,24 @@ fun DiscoverScreen(
 
 @Composable
 private fun SearchResultContent(
-    result: SearchResultUiState,
-    onRetry: () -> Unit,
+    uiState: SearchUiState,
+    developers: LazyPagingItems<DeveloperSummary>,
     onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    when (result) {
-        SearchResultUiState.Initial -> MessageContent(
+    val refreshState = developers.loadState.refresh
+    when {
+        uiState.validationError == SearchValidationError.EmptyQuery -> ErrorContent(
+            reason = SearchErrorReason.EmptyQuery,
+            onRetry = {},
+            showRetry = false,
+            modifier = modifier,
+        )
+        !uiState.hasSubmittedSearch -> MessageContent(
             message = stringResource(R.string.search_initial_message),
             modifier = modifier,
         )
-        SearchResultUiState.Loading -> {
+        refreshState is LoadState.Loading -> {
             val loadingDescription = stringResource(R.string.search_loading)
             Box(
                 modifier = modifier
@@ -161,17 +177,17 @@ private fun SearchResultContent(
                 CircularProgressIndicator()
             }
         }
-        SearchResultUiState.Empty -> MessageContent(
+        refreshState is LoadState.Error -> ErrorContent(
+            reason = refreshState.error.toSearchErrorReason(),
+            onRetry = developers::retry,
+            modifier = modifier,
+        )
+        developers.itemCount == 0 -> MessageContent(
             message = stringResource(R.string.search_empty_message),
             modifier = modifier,
         )
-        is SearchResultUiState.Error -> ErrorContent(
-            reason = result.reason,
-            onRetry = onRetry,
-            modifier = modifier,
-        )
-        is SearchResultUiState.Success -> DeveloperResults(
-            result = result,
+        else -> DeveloperResults(
+            developers = developers,
             onDeveloperClick = onDeveloperClick,
             modifier = modifier,
         )
@@ -180,7 +196,7 @@ private fun SearchResultContent(
 
 @Composable
 private fun DeveloperResults(
-    result: SearchResultUiState.Success,
+    developers: LazyPagingItems<DeveloperSummary>,
     onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -191,19 +207,42 @@ private fun DeveloperResults(
         item {
             Text(
                 text = pluralStringResource(
-                    R.plurals.search_result_count,
-                    result.totalCount,
-                    result.totalCount,
+                    R.plurals.search_loaded_count,
+                    developers.itemCount,
+                    developers.itemCount,
                 ),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        items(items = result.developers, key = DeveloperSummary::githubId) { developer ->
-            DeveloperResultCard(
-                developer = developer,
-                onClick = { onDeveloperClick(developer.login) },
-            )
+        items(
+            count = developers.itemCount,
+            key = developers.itemKey(DeveloperSummary::githubId),
+        ) { index ->
+            developers[index]?.let { developer ->
+                DeveloperResultCard(
+                    developer = developer,
+                    onClick = { onDeveloperClick(developer.login) },
+                )
+            }
+        }
+        when (val appendState = developers.loadState.append) {
+            is LoadState.Loading -> item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                }
+            }
+            is LoadState.Error -> item {
+                ErrorContent(
+                    reason = appendState.error.toSearchErrorReason(),
+                    onRetry = developers::retry,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                )
+            }
+            is LoadState.NotLoading -> Unit
         }
     }
 }
@@ -269,6 +308,7 @@ private fun DeveloperResultCard(
 private fun ErrorContent(
     reason: SearchErrorReason,
     onRetry: () -> Unit,
+    showRetry: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -281,10 +321,30 @@ private fun ErrorContent(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.error,
         )
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = onRetry) {
-            Text(stringResource(R.string.retry_action))
+        if (showRetry) {
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = onRetry) {
+                Text(stringResource(R.string.retry_action))
+            }
         }
+    }
+}
+
+private fun Throwable.toSearchErrorReason(): SearchErrorReason {
+    val repositoryError = (this as? com.mohamedamr.devcollab.domain.repository.DeveloperPagingException)
+        ?.repositoryError
+        ?: return SearchErrorReason.Unexpected
+    return when (repositoryError) {
+        com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError.NetworkUnavailable ->
+            SearchErrorReason.NetworkUnavailable
+        is com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError.RateLimited ->
+            SearchErrorReason.RateLimited(repositoryError.resetAtEpochSeconds)
+        is com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError.Server ->
+            SearchErrorReason.Server(repositoryError.statusCode)
+        com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError.InvalidData ->
+            SearchErrorReason.InvalidData
+        com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryError.Unexpected ->
+            SearchErrorReason.Unexpected
     }
 }
 

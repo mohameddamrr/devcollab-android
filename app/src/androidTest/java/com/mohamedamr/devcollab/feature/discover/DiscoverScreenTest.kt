@@ -1,5 +1,10 @@
 package com.mohamedamr.devcollab.feature.discover
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -14,6 +19,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import kotlinx.coroutines.flow.flowOf
 
 class DiscoverScreenTest {
     @get:Rule
@@ -27,6 +33,7 @@ class DiscoverScreenTest {
             DevCollabTheme {
                 DiscoverScreen(
                     uiState = SearchUiState(),
+                    pagingData = flowOf(PagingData.empty()),
                     onQueryChanged = { queryChange = it },
                     onSearch = { searchClicked = true },
                     onDeveloperClick = {},
@@ -49,11 +56,9 @@ class DiscoverScreenTest {
                 DiscoverScreen(
                     uiState = SearchUiState(
                         query = "octocat",
-                        result = SearchResultUiState.Success(
-                            developers = listOf(testDeveloper),
-                            totalCount = 1,
-                        ),
+                        hasSubmittedSearch = true,
                     ),
+                    pagingData = flowOf(PagingData.from(listOf(testDeveloper))),
                     onQueryChanged = {},
                     onSearch = {},
                     onDeveloperClick = { selectedUsername = it },
@@ -70,31 +75,44 @@ class DiscoverScreenTest {
     }
 
     @Test
-    fun networkErrorDisplaysRetryAndInvokesCallback() {
-        var retried = false
+    fun networkErrorDisplaysRetry() {
         composeRule.setContent {
             DevCollabTheme {
                 DiscoverScreen(
                     uiState = SearchUiState(
                         query = "android",
-                        result = SearchResultUiState.Error(
-                            SearchErrorReason.NetworkUnavailable,
-                        ),
+                        hasSubmittedSearch = true,
                     ),
+                    pagingData = failingPagingFlow(),
                     onQueryChanged = {},
-                    onSearch = { retried = true },
+                    onSearch = {},
                     onDeveloperClick = {},
                 )
             }
         }
 
         composeRule.onNodeWithTag(SEARCH_ERROR_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("Retry").performClick()
-
-        assertTrue(retried)
+        composeRule.onNodeWithText("Retry").assertIsDisplayed()
     }
 
     private companion object {
+        fun failingPagingFlow() = Pager(
+            config = PagingConfig(pageSize = 1),
+            pagingSourceFactory = {
+                object : PagingSource<Int, DeveloperSummary>() {
+                    override suspend fun load(
+                        params: LoadParams<Int>,
+                    ): LoadResult<Int, DeveloperSummary> = LoadResult.Error(
+                        IllegalStateException("test failure"),
+                    )
+
+                    override fun getRefreshKey(
+                        state: PagingState<Int, DeveloperSummary>,
+                    ): Int? = null
+                }
+            },
+        ).flow
+
         val testDeveloper = DeveloperSummary(
             githubId = 1L,
             login = "octocat",

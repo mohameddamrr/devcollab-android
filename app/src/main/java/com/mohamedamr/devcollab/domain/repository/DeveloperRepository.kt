@@ -1,9 +1,14 @@
 package com.mohamedamr.devcollab.domain.repository
 
+import androidx.paging.PagingData
 import com.mohamedamr.devcollab.domain.model.DeveloperSearchPage
 import com.mohamedamr.devcollab.domain.model.DeveloperProfile
+import com.mohamedamr.devcollab.domain.model.DeveloperSummary
+import kotlinx.coroutines.flow.Flow
 
 interface DeveloperRepository {
+    fun getPagedDevelopers(query: String): Flow<PagingData<DeveloperSummary>>
+
     suspend fun searchDevelopers(
         query: String,
         page: Int = 1,
@@ -32,3 +37,7 @@ sealed interface DeveloperRepositoryError {
 
     data object Unexpected : DeveloperRepositoryError
 }
+
+class DeveloperPagingException(
+    val repositoryError: DeveloperRepositoryError,
+) : Exception("Unable to load a page of developers.")

@@ -17,6 +17,10 @@
         <item quantity="one">%,d matching developer</item>
         <item quantity="other">%,d matching developers</item>
     </plurals>
+    <plurals name="search_loaded_count">
+        <item quantity="one">%d developer loaded</item>
+        <item quantity="other">%d developers loaded</item>
+    </plurals>
     <string name="developer_avatar_description">Avatar for %1$s</string>
     <string name="github_id_value">GitHub ID: %1$d</string>
     <string name="github_site_admin">GitHub site administrator</string>
