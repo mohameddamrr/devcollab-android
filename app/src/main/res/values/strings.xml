@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">DevCollab</string>
+    <string name="navigation_discover">Discover</string>
+    <string name="navigation_requests">Requests</string>
+    <string name="navigation_saved">Saved</string>
+    <string name="navigation_profile">Profile</string>
+
+    <string name="discover_title">Discover developers</string>
+    <string name="discover_phase_one_description">GitHub developer search will be introduced in the next phases.</string>
+    <string name="requests_title">Collaboration requests</string>
+    <string name="requests_phase_one_description">Received and sent requests will appear here after GitHub sign-in is added.</string>
+    <string name="saved_title">Saved developers</string>
+    <string name="saved_phase_one_description">Developers you save for later will appear here.</string>
+    <string name="profile_title">Your profile</string>
+    <string name="profile_phase_one_description">Your GitHub-linked collaboration profile will appear here.</string>
 </resources>
