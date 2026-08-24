@@ -114,7 +114,24 @@ Coverage includes ViewModel states, remote/cache behavior, Room ordering/restora
 
 ## Screenshots
 
-Capture screenshots from the configured project because authentication/member data belongs to its owner. Follow the [screenshot checklist](docs/INTERVIEW_GUIDE.md#screenshot-checklist) and place images under `docs/screenshots/` before a public portfolio release.
+<table>
+  <tr>
+    <td align="center"><strong>GitHub developer search</strong></td>
+    <td align="center"><strong>Developer profile</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/dark-developer-search.png" alt="GitHub developer search in dark theme" width="320"></td>
+    <td><img src="docs/screenshots/dark-developer-profile.png" alt="JakeWharton developer profile in dark theme" width="320"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Repository exploration</strong></td>
+    <td align="center"><strong>Evidence-based discovery</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/dark-repositories.png" alt="Developer repositories in dark theme" width="320"></td>
+    <td><img src="docs/screenshots/dark-collaborator-discovery.png" alt="Collaborator discovery in dark theme" width="320"></td>
+  </tr>
+</table>
 
 ## Limitations
 
