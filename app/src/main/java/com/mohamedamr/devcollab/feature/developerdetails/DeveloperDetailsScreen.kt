@@ -69,6 +69,7 @@ import com.mohamedamr.devcollab.domain.model.DeveloperActivityKind
 import com.mohamedamr.devcollab.domain.model.mostActiveRecently
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 import com.mohamedamr.devcollab.domain.repository.SavedDeveloperRepository
+import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.Locale
 
@@ -77,6 +78,9 @@ fun DeveloperDetailsRoute(
     username: String,
     developerRepository: DeveloperRepository,
     savedDeveloperRepository: SavedDeveloperRepository,
+    authRepository: AuthRepository,
+    onCollaborate: (Long) -> Unit,
+    onMyProfile: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -89,6 +93,7 @@ fun DeveloperDetailsRoute(
         factory = SavedDeveloperViewModelFactory(savedDeveloperRepository),
     )
     val isSaved by savedViewModel.isSaved.collectAsStateWithLifecycle()
+    val currentUser by authRepository.authenticatedUser.collectAsStateWithLifecycle(initialValue = null)
     LaunchedEffect(uiState.result) {
         (uiState.result as? DeveloperDetailsResultUiState.Success)?.profile?.let(savedViewModel::bind)
     }
@@ -124,6 +129,9 @@ fun DeveloperDetailsRoute(
         },
         isSaved = isSaved,
         onToggleSaved = savedViewModel::toggle,
+        currentGithubUserId = currentUser?.githubUserId,
+        onCollaborate = onCollaborate,
+        onMyProfile = onMyProfile,
         modifier = modifier,
     )
 }
@@ -146,6 +154,9 @@ fun DeveloperDetailsScreen(
     onShareProfile: (DeveloperProfile) -> Unit,
     isSaved: Boolean = false,
     onToggleSaved: () -> Unit = {},
+    currentGithubUserId: Long? = null,
+    onCollaborate: (Long) -> Unit = {},
+    onMyProfile: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -180,6 +191,9 @@ fun DeveloperDetailsScreen(
                 onShareProfile = onShareProfile,
                 isSaved = isSaved,
                 onToggleSaved = onToggleSaved,
+                currentGithubUserId = currentGithubUserId,
+                onCollaborate = onCollaborate,
+                onMyProfile = onMyProfile,
                 selectedTab = uiState.selectedTab,
                 repositoriesState = uiState.repositories,
                 activityState = uiState.activity,
@@ -208,6 +222,9 @@ private fun DeveloperProfileContent(
     onShareProfile: (DeveloperProfile) -> Unit,
     isSaved: Boolean,
     onToggleSaved: () -> Unit,
+    currentGithubUserId: Long?,
+    onCollaborate: (Long) -> Unit,
+    onMyProfile: () -> Unit,
     selectedTab: DeveloperProfileTab,
     repositoriesState: DeveloperRepositoriesUiState,
     activityState: DeveloperActivityUiState,
@@ -348,6 +365,20 @@ private fun DeveloperProfileContent(
         item {
             OutlinedButton(onClick = onToggleSaved, modifier = Modifier.fillMaxWidth()) {
                 Text(if (isSaved) "Remove from Saved" else "Save developer")
+            }
+        }
+
+        currentGithubUserId?.let { signedInGithubId ->
+            item {
+                Button(
+                    onClick = {
+                        if (signedInGithubId == profile.githubId) onMyProfile()
+                        else onCollaborate(profile.githubId)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (signedInGithubId == profile.githubId) "View My Profile" else "Send Collaboration Request")
+                }
             }
         }
 

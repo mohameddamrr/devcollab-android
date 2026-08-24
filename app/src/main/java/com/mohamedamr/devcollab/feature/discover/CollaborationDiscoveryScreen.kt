@@ -61,7 +61,10 @@ fun CollaborationDiscoveryScreen(
             uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
             uiState.errorMessage != null -> Text(uiState.errorMessage, color = MaterialTheme.colorScheme.error)
             uiState.hasSearched && uiState.candidates.isEmpty() -> Text("No contributors found in the inspected public repositories.")
-            else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            else -> LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 item {
                     if (uiState.repositoriesInspected > 0) {
                         Text("Inspected ${uiState.repositoriesInspected} relevant public repositories")

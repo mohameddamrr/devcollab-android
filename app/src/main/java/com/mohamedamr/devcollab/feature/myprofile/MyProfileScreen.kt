@@ -155,7 +155,12 @@ fun MyProfileScreen(
                                     minLines = 3,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
-                                Text("Interests")
+                                Text("Technologies of interest")
+                                Text(
+                                    "These are your preferences, not verified skill claims.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                                 ChoiceChips(PROFILE_INTERESTS, uiState.draftInterests, onInterestToggle)
                                 Text("Preferred project types")
                                 ChoiceChips(PROJECT_TYPES, uiState.draftProjectTypes, onProjectTypeToggle)
@@ -189,7 +194,7 @@ fun MyProfileScreen(
                             } else {
                                 Text(if (profile.availableForCollaboration) "Available for collaboration" else "Not currently available")
                                 if (profile.collaborationBio.isNotBlank()) Text(profile.collaborationBio)
-                                if (profile.collaborationInterests.isNotEmpty()) Text("Interests: ${profile.collaborationInterests.joinToString()}")
+                                if (profile.collaborationInterests.isNotEmpty()) Text("Technology interests: ${profile.collaborationInterests.joinToString()}")
                                 if (profile.preferredProjectTypes.isNotEmpty()) Text("Projects: ${profile.preferredProjectTypes.joinToString()}")
                                 Text(if (profile.remotePreferred) "Remote preferred" else "Location-based collaboration")
                                 if (profile.location.isNotBlank()) Text("Location: ${profile.location}")
@@ -224,7 +229,10 @@ private fun ChoiceChips(
     }
 }
 
-private val PROFILE_INTERESTS = listOf("Android", "Backend", "Frontend", "Open source", "Learning")
+private val PROFILE_INTERESTS = listOf(
+    "Kotlin", "Android", "Jetpack Compose", "Room", "Retrofit",
+    "Java", "Python", "JavaScript", "React", "Firebase",
+)
 private val PROJECT_TYPES = listOf("Side project", "Open source", "Hackathon", "Startup", "Learning project")
 
 private class AuthViewModelFactory(

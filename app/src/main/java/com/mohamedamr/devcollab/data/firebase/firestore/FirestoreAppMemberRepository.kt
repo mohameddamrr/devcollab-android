@@ -5,6 +5,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.mohamedamr.devcollab.domain.model.AppMemberProfile
 import com.mohamedamr.devcollab.domain.model.AuthenticatedAppUser
 import com.mohamedamr.devcollab.domain.model.CollaborationProfileInput
+import com.mohamedamr.devcollab.domain.model.PublicAppMember
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import kotlinx.coroutines.tasks.await
 
@@ -13,6 +14,8 @@ class FirestoreAppMemberRepository(
 ) : AppMemberRepository {
     override suspend fun ensureMember(user: AuthenticatedAppUser): AppMemberProfile {
         val document = firestore.collection(APP_USERS_COLLECTION).document(user.firebaseUid)
+        val publicDocument = firestore.collection(PUBLIC_MEMBERS_COLLECTION)
+            .document(user.githubUserId.toString())
         return firestore.runTransaction { transaction ->
             val existing = transaction.get(document)
             val commonFields = mapOf(
@@ -53,6 +56,17 @@ class FirestoreAppMemberRepository(
                     ),
                 )
             }
+            transaction.set(
+                publicDocument,
+                mapOf(
+                    FIREBASE_UID_FIELD to user.firebaseUid,
+                    GITHUB_USER_ID_FIELD to user.githubUserId,
+                    GITHUB_LOGIN_FIELD to user.githubLogin,
+                    PHOTO_URL_FIELD to user.photoUrl,
+                    AVAILABLE_FIELD to (existing.getBoolean(AVAILABLE_FIELD) ?: false),
+                    UPDATED_AT_FIELD to FieldValue.serverTimestamp(),
+                ),
+            )
             AppMemberProfile(
                 firebaseUid = user.firebaseUid,
                 githubUserId = user.githubUserId,
@@ -89,7 +103,17 @@ class FirestoreAppMemberRepository(
                 UPDATED_AT_FIELD to FieldValue.serverTimestamp(),
             ),
         ).await()
-        val snapshot = document.get().await()
+        val updatedSnapshot = document.get().await()
+        val githubUserId = updatedSnapshot.getLong(GITHUB_USER_ID_FIELD) ?: 0L
+        firestore.collection(PUBLIC_MEMBERS_COLLECTION).document(githubUserId.toString()).update(
+            mapOf(
+                AVAILABLE_FIELD to input.availableForCollaboration,
+                GITHUB_LOGIN_FIELD to updatedSnapshot.getString(GITHUB_LOGIN_FIELD).orEmpty(),
+                PHOTO_URL_FIELD to updatedSnapshot.getString(PHOTO_URL_FIELD),
+                UPDATED_AT_FIELD to FieldValue.serverTimestamp(),
+            ),
+        ).await()
+        val snapshot = updatedSnapshot
         return AppMemberProfile(
             firebaseUid = snapshot.getString(FIREBASE_UID_FIELD) ?: firebaseUid,
             githubUserId = snapshot.getLong(GITHUB_USER_ID_FIELD) ?: 0L,
@@ -106,12 +130,26 @@ class FirestoreAppMemberRepository(
             contactMethod = snapshot.getString(CONTACT_METHOD_FIELD).orEmpty(),
         )
     }
+
+    override suspend fun findPublicMemberByGitHubId(githubUserId: Long): PublicAppMember? {
+        val snapshot = firestore.collection(PUBLIC_MEMBERS_COLLECTION)
+            .document(githubUserId.toString()).get().await()
+        if (!snapshot.exists()) return null
+        return PublicAppMember(
+            firebaseUid = snapshot.getString(FIREBASE_UID_FIELD) ?: return null,
+            githubUserId = snapshot.getLong(GITHUB_USER_ID_FIELD) ?: return null,
+            githubLogin = snapshot.getString(GITHUB_LOGIN_FIELD) ?: return null,
+            photoUrl = snapshot.getString(PHOTO_URL_FIELD),
+            availableForCollaboration = snapshot.getBoolean(AVAILABLE_FIELD) ?: false,
+        )
+    }
 }
 
 private fun com.google.firebase.firestore.DocumentSnapshot.stringList(field: String): List<String> =
     (get(field) as? List<*>)?.filterIsInstance<String>().orEmpty()
 
 private const val APP_USERS_COLLECTION = "appUsers"
+private const val PUBLIC_MEMBERS_COLLECTION = "publicMembers"
 private const val FIREBASE_UID_FIELD = "firebaseUid"
 private const val GITHUB_USER_ID_FIELD = "githubUserId"
 private const val GITHUB_LOGIN_FIELD = "githubLogin"

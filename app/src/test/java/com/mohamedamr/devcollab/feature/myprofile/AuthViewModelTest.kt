@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import com.mohamedamr.devcollab.domain.model.AuthenticatedAppUser
 import com.mohamedamr.devcollab.domain.model.AppMemberProfile
 import com.mohamedamr.devcollab.domain.model.CollaborationProfileInput
+import com.mohamedamr.devcollab.domain.model.PublicAppMember
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.mohamedamr.devcollab.testutil.MainDispatcherRule
@@ -110,6 +111,8 @@ private class FakeAppMemberRepository : AppMemberRepository {
             contactMethod = input.contactMethod,
         )
     }
+
+    override suspend fun findPublicMemberByGitHubId(githubUserId: Long): PublicAppMember? = null
 }
 
 private class FakeAuthRepository(initialUser: AuthenticatedAppUser?) : AuthRepository {

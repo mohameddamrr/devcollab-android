@@ -50,3 +50,9 @@ object DeveloperDetailsDestination {
 
     fun createRoute(username: String): String = "developer/${Uri.encode(username)}"
 }
+
+object CollaborationRequestDestination {
+    const val githubUserIdArgument = "githubUserId"
+    const val route = "request/{$githubUserIdArgument}"
+    fun createRoute(githubUserId: Long) = "request/$githubUserId"
+}

@@ -36,8 +36,16 @@ service cloud.firestore {
         && request.resource.data.collaborationBio.size() <= 500
         && request.resource.data.collaborationInterests is list
         && request.resource.data.collaborationInterests.size() <= 10
+        && request.resource.data.collaborationInterests.hasOnly([
+          'Kotlin', 'Android', 'Jetpack Compose', 'Room', 'Retrofit',
+          'Java', 'Python', 'JavaScript', 'React', 'Firebase',
+          'Backend', 'Frontend', 'Open source', 'Learning'
+        ])
         && request.resource.data.preferredProjectTypes is list
         && request.resource.data.preferredProjectTypes.size() <= 5
+        && request.resource.data.preferredProjectTypes.hasOnly([
+          'Side project', 'Open source', 'Hackathon', 'Startup', 'Learning project'
+        ])
         && request.resource.data.remotePreferred is bool
         && request.resource.data.location is string
         && request.resource.data.location.size() <= 100
@@ -45,9 +53,30 @@ service cloud.firestore {
         && request.resource.data.contactMethod.size() <= 200;
     }
 
+    function isBoundedStringList(values, maxLength) {
+      return values is list
+        && values.size() <= 10
+        && (values.size() < 1 || (values[0] is string && values[0].size() <= maxLength))
+        && (values.size() < 2 || (values[1] is string && values[1].size() <= maxLength))
+        && (values.size() < 3 || (values[2] is string && values[2].size() <= maxLength))
+        && (values.size() < 4 || (values[3] is string && values[3].size() <= maxLength))
+        && (values.size() < 5 || (values[4] is string && values[4].size() <= maxLength))
+        && (values.size() < 6 || (values[5] is string && values[5].size() <= maxLength))
+        && (values.size() < 7 || (values[6] is string && values[6].size() <= maxLength))
+        && (values.size() < 8 || (values[7] is string && values[7].size() <= maxLength))
+        && (values.size() < 9 || (values[8] is string && values[8].size() <= maxLength))
+        && (values.size() < 10 || (values[9] is string && values[9].size() <= maxLength));
+    }
+
     function isRequestParticipant(data) {
       return isSignedIn()
         && (data.senderUid == request.auth.uid || data.receiverUid == request.auth.uid);
+    }
+
+    function hasGitHubIdentity() {
+      return isSignedIn()
+        && request.auth.token.firebase.identities.keys().hasAny(['github.com'])
+        && request.auth.token.firebase.identities['github.com'].size() > 0;
     }
 
     function hasValidRequestContent() {
@@ -56,8 +85,7 @@ service cloud.firestore {
         && request.resource.data.projectName.size() <= 120
         && request.resource.data.projectDescription is string
         && request.resource.data.projectDescription.size() <= 2000
-        && request.resource.data.technologies is list
-        && request.resource.data.technologies.size() <= 20
+        && isBoundedStringList(request.resource.data.technologies, 40)
         && request.resource.data.collaborationType is string
         && request.resource.data.collaborationType.size() > 0
         && request.resource.data.collaborationType.size() <= 100
@@ -69,8 +97,7 @@ service cloud.firestore {
         && request.resource.data.expectedCommitment.size() <= 200
         && request.resource.data.message is string
         && request.resource.data.message.size() <= 2000
-        && request.resource.data.evidenceReasons is list
-        && request.resource.data.evidenceReasons.size() <= 10;
+        && isBoundedStringList(request.resource.data.evidenceReasons, 200);
     }
 
     match /appUsers/{userId} {
@@ -114,10 +141,46 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /publicMembers/{githubUserId} {
+      allow read: if isSignedIn();
+
+      allow create: if hasGitHubIdentity()
+        && request.resource.data.keys().hasOnly([
+          'firebaseUid', 'githubUserId', 'githubLogin', 'photoUrl',
+          'availableForCollaboration', 'updatedAt'
+        ])
+        && request.resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.githubUserId == int(githubUserId)
+        && request.resource.data.githubUserId
+          == int(request.auth.token.firebase.identities['github.com'][0])
+        && request.resource.data.githubLogin is string
+        && request.resource.data.githubLogin.size() > 0
+        && request.resource.data.githubLogin.size() <= 39
+        && request.resource.data.availableForCollaboration is bool
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if hasGitHubIdentity()
+        && resource.data.firebaseUid == request.auth.uid
+        && request.resource.data.firebaseUid == resource.data.firebaseUid
+        && request.resource.data.githubUserId == resource.data.githubUserId
+        && request.resource.data.githubUserId == int(githubUserId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'githubLogin', 'photoUrl', 'availableForCollaboration', 'updatedAt'
+        ])
+        && request.resource.data.githubLogin is string
+        && request.resource.data.githubLogin.size() > 0
+        && request.resource.data.githubLogin.size() <= 39
+        && request.resource.data.availableForCollaboration is bool
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if false;
+    }
+
     match /collaborationRequests/{requestId} {
       allow read: if isRequestParticipant(resource.data);
 
       allow create: if isSignedIn()
+        && hasGitHubIdentity()
         && request.resource.data.keys().hasOnly([
           'senderUid', 'receiverUid', 'senderGithubUserId', 'receiverGithubUserId',
           'projectName', 'projectDescription', 'technologies', 'collaborationType',

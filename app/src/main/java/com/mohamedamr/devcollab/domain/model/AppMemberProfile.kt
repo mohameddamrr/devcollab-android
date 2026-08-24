@@ -25,3 +25,11 @@ data class CollaborationProfileInput(
     val location: String,
     val contactMethod: String,
 )
+
+data class PublicAppMember(
+    val firebaseUid: String,
+    val githubUserId: Long,
+    val githubLogin: String,
+    val photoUrl: String?,
+    val availableForCollaboration: Boolean,
+)

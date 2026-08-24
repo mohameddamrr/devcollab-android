@@ -62,11 +62,32 @@ fun AppNavigation(
                 username = username,
                 developerRepository = developerRepository,
                 savedDeveloperRepository = savedDeveloperRepository,
+                authRepository = authRepository,
+                onCollaborate = { githubUserId ->
+                    navController.navigate(CollaborationRequestDestination.createRoute(githubUserId))
+                },
+                onMyProfile = { navController.navigate(AppDestination.Profile.route) },
                 onBack = navController::navigateUp,
             )
         }
         composable(AppDestination.Requests.route) {
-            RequestsScreen(authRepository, collaborationRequestRepository)
+            RequestsScreen(authRepository, collaborationRequestRepository, appMemberRepository)
+        }
+        composable(
+            route = CollaborationRequestDestination.route,
+            arguments = listOf(
+                navArgument(CollaborationRequestDestination.githubUserIdArgument) {
+                    type = NavType.LongType
+                },
+            ),
+        ) { backStackEntry ->
+            RequestsScreen(
+                authRepository = authRepository,
+                requestRepository = collaborationRequestRepository,
+                appMemberRepository = appMemberRepository,
+                initialReceiverGithubId = backStackEntry.arguments
+                    ?.getLong(CollaborationRequestDestination.githubUserIdArgument),
+            )
         }
         composable(AppDestination.Saved.route) {
             SavedScreen(

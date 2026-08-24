@@ -37,7 +37,10 @@ fun SavedScreen(
         Text("Saved locally on this device and available offline.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (saved.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No saved developers yet. Save one from their profile.")
-        } else LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        } else LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             items(saved, key = SavedDeveloper::githubId) { developer ->
                 ElevatedCard(onClick = { onDeveloperClick(developer.login) }, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
