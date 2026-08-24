@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
                     authRepository = appContainer.authRepository,
                     appMemberRepository = appContainer.appMemberRepository,
                     discoveryRepository = appContainer.discoveryRepository,
+                    collaborationRequestRepository = appContainer.collaborationRequestRepository,
                 )
             }
         }

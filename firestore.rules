@@ -45,6 +45,34 @@ service cloud.firestore {
         && request.resource.data.contactMethod.size() <= 200;
     }
 
+    function isRequestParticipant(data) {
+      return isSignedIn()
+        && (data.senderUid == request.auth.uid || data.receiverUid == request.auth.uid);
+    }
+
+    function hasValidRequestContent() {
+      return request.resource.data.projectName is string
+        && request.resource.data.projectName.size() > 0
+        && request.resource.data.projectName.size() <= 120
+        && request.resource.data.projectDescription is string
+        && request.resource.data.projectDescription.size() <= 2000
+        && request.resource.data.technologies is list
+        && request.resource.data.technologies.size() <= 20
+        && request.resource.data.collaborationType is string
+        && request.resource.data.collaborationType.size() > 0
+        && request.resource.data.collaborationType.size() <= 100
+        && request.resource.data.neededRole is string
+        && request.resource.data.neededRole.size() > 0
+        && request.resource.data.neededRole.size() <= 120
+        && request.resource.data.expectedCommitment is string
+        && request.resource.data.expectedCommitment.size() > 0
+        && request.resource.data.expectedCommitment.size() <= 200
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 2000
+        && request.resource.data.evidenceReasons is list
+        && request.resource.data.evidenceReasons.size() <= 10;
+    }
+
     match /appUsers/{userId} {
       allow read: if isOwner(userId);
 
@@ -82,6 +110,43 @@ service cloud.firestore {
           'preferredProjectTypes', 'remotePreferred', 'location', 'contactMethod',
           'updatedAt'
         ]);
+
+      allow delete: if false;
+    }
+
+    match /collaborationRequests/{requestId} {
+      allow read: if isRequestParticipant(resource.data);
+
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'senderUid', 'receiverUid', 'senderGithubUserId', 'receiverGithubUserId',
+          'projectName', 'projectDescription', 'technologies', 'collaborationType',
+          'neededRole', 'expectedCommitment', 'message', 'evidenceReasons', 'status',
+          'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.receiverUid is string
+        && request.resource.data.receiverUid != request.auth.uid
+        && request.resource.data.senderGithubUserId is int
+        && request.resource.data.receiverGithubUserId is int
+        && request.resource.data.senderGithubUserId
+          == int(request.auth.token.firebase.identities['github.com'][0])
+        && exists(/databases/$(database)/documents/appUsers/$(request.resource.data.receiverUid))
+        && get(/databases/$(database)/documents/appUsers/$(request.resource.data.receiverUid)).data.githubUserId
+          == request.resource.data.receiverGithubUserId
+        && hasValidRequestContent()
+        && request.resource.data.status == 'PENDING'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isRequestParticipant(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && resource.data.status == 'PENDING'
+        && request.resource.data.updatedAt == request.time
+        && ((request.auth.uid == resource.data.receiverUid
+            && request.resource.data.status in ['ACCEPTED', 'DECLINED'])
+          || (request.auth.uid == resource.data.senderUid
+            && request.resource.data.status == 'CANCELLED'));
 
       allow delete: if false;
     }

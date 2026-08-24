@@ -13,6 +13,7 @@ import com.mohamedamr.devcollab.feature.myprofile.MyProfileRoute
 import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
+import com.mohamedamr.devcollab.domain.repository.CollaborationRequestRepository
 import com.mohamedamr.devcollab.feature.requests.RequestsScreen
 import com.mohamedamr.devcollab.feature.saved.SavedScreen
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
@@ -27,6 +28,7 @@ fun AppNavigation(
     authRepository: AuthRepository,
     appMemberRepository: AppMemberRepository,
     discoveryRepository: DiscoveryRepository,
+    collaborationRequestRepository: CollaborationRequestRepository,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -60,7 +62,9 @@ fun AppNavigation(
                 onBack = navController::navigateUp,
             )
         }
-        composable(AppDestination.Requests.route) { RequestsScreen() }
+        composable(AppDestination.Requests.route) {
+            RequestsScreen(authRepository, collaborationRequestRepository)
+        }
         composable(AppDestination.Saved.route) { SavedScreen() }
         composable(AppDestination.Profile.route) {
             MyProfileRoute(authRepository, appMemberRepository)

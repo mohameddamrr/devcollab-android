@@ -16,6 +16,8 @@ import com.mohamedamr.devcollab.data.firebase.firestore.FirestoreAppMemberReposi
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import com.mohamedamr.devcollab.data.repository.GitHubDiscoveryRepository
 import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
+import com.mohamedamr.devcollab.data.firebase.firestore.FirestoreCollaborationRequestRepository
+import com.mohamedamr.devcollab.domain.repository.CollaborationRequestRepository
 
 class AppContainer(
     applicationContext: Context,
@@ -57,6 +59,13 @@ class AppContainer(
 
     val appMemberRepository: AppMemberRepository by lazy {
         FirestoreAppMemberRepository(FirebaseFirestore.getInstance())
+    }
+
+    val collaborationRequestRepository: CollaborationRequestRepository by lazy {
+        FirestoreCollaborationRequestRepository(
+            firestore = FirebaseFirestore.getInstance(),
+            auth = FirebaseAuth.getInstance(),
+        )
     }
 
     private companion object {
