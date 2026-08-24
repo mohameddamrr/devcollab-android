@@ -13,7 +13,11 @@ class MainActivity : ComponentActivity() {
         val appContainer = (application as DevCollabApplication).appContainer
         setContent {
             DevCollabTheme {
-                DevCollabApp(developerRepository = appContainer.developerRepository)
+                DevCollabApp(
+                    developerRepository = appContainer.developerRepository,
+                    authRepository = appContainer.authRepository,
+                    appMemberRepository = appContainer.appMemberRepository,
+                )
             }
         }
     }

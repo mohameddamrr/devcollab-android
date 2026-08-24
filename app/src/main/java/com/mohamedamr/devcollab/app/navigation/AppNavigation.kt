@@ -9,7 +9,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import com.mohamedamr.devcollab.feature.myprofile.MyProfileScreen
+import com.mohamedamr.devcollab.feature.myprofile.MyProfileRoute
+import com.mohamedamr.devcollab.domain.repository.AuthRepository
+import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import com.mohamedamr.devcollab.feature.requests.RequestsScreen
 import com.mohamedamr.devcollab.feature.saved.SavedScreen
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
@@ -21,6 +23,8 @@ fun AppNavigation(
     navController: NavHostController,
     contentPadding: PaddingValues,
     developerRepository: DeveloperRepository,
+    authRepository: AuthRepository,
+    appMemberRepository: AppMemberRepository,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -55,6 +59,8 @@ fun AppNavigation(
         }
         composable(AppDestination.Requests.route) { RequestsScreen() }
         composable(AppDestination.Saved.route) { SavedScreen() }
-        composable(AppDestination.Profile.route) { MyProfileScreen() }
+        composable(AppDestination.Profile.route) {
+            MyProfileRoute(authRepository, appMemberRepository)
+        }
     }
 }

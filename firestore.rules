@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function hasMatchingGitHubIdentity() {
+      return request.auth.token.firebase.identities.keys().hasAny(['github.com'])
+        && request.auth.token.firebase.identities['github.com'].size() > 0
+        && request.resource.data.githubUserId
+          == int(request.auth.token.firebase.identities['github.com'][0]);
+    }
+
+    function hasValidIdentityMetadata() {
+      return request.resource.data.githubLogin is string
+        && request.resource.data.githubLogin.size() > 0
+        && request.resource.data.githubLogin.size() <= 39
+        && (request.resource.data.displayName == null
+          || (request.resource.data.displayName is string
+            && request.resource.data.displayName.size() <= 100))
+        && (request.resource.data.photoUrl == null
+          || (request.resource.data.photoUrl is string
+            && request.resource.data.photoUrl.size() <= 2048));
+    }
+
+    match /appUsers/{userId} {
+      allow read: if isOwner(userId);
+
+      allow create: if isOwner(userId)
+        && request.resource.data.firebaseUid == request.auth.uid
+        && hasMatchingGitHubIdentity()
+        && request.resource.data.keys().hasOnly([
+          'firebaseUid', 'githubUserId', 'githubLogin', 'displayName', 'photoUrl',
+          'onboardingCompleted', 'availableForCollaboration', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.firebaseUid is string
+        && request.resource.data.githubUserId is int
+        && hasValidIdentityMetadata()
+        && request.resource.data.onboardingCompleted is bool
+        && request.resource.data.availableForCollaboration is bool
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && hasMatchingGitHubIdentity()
+        && request.resource.data.firebaseUid == resource.data.firebaseUid
+        && request.resource.data.githubUserId == resource.data.githubUserId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && hasValidIdentityMetadata()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'githubLogin', 'displayName', 'photoUrl', 'updatedAt'
+        ]);
+
+      allow delete: if false;
+    }
+  }
+}
