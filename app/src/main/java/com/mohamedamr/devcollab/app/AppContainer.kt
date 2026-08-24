@@ -14,11 +14,16 @@ import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.mohamedamr.devcollab.data.firebase.firestore.FirestoreAppMemberRepository
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
+import com.mohamedamr.devcollab.data.repository.GitHubDiscoveryRepository
+import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
 
 class AppContainer(
     applicationContext: Context,
     isDebugBuild: Boolean,
 ) {
+    private val githubRemoteDataSource: GitHubRemoteDataSource by lazy {
+        GitHubRemoteDataSource(GitHubClientFactory.create(isDebugBuild = isDebugBuild))
+    }
     private val database: DevCollabDatabase by lazy {
         Room.databaseBuilder(
             context = applicationContext,
@@ -28,12 +33,14 @@ class AppContainer(
     }
 
     val developerRepository: DeveloperRepository by lazy {
-        val apiService = GitHubClientFactory.create(isDebugBuild = isDebugBuild)
-        val remoteDataSource = GitHubRemoteDataSource(apiService = apiService)
         DefaultDeveloperRepository(
-            remoteDataSource = remoteDataSource,
+            remoteDataSource = githubRemoteDataSource,
             developerSearchDao = database.developerSearchDao(),
         )
+    }
+
+    val discoveryRepository: DiscoveryRepository by lazy {
+        GitHubDiscoveryRepository(githubRemoteDataSource)
     }
 
     val authRepository: AuthRepository by lazy {

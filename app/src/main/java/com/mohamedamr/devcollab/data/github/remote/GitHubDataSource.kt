@@ -5,6 +5,8 @@ import com.mohamedamr.devcollab.data.github.remote.dto.GitHubUserDetailDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositoryDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubEventDto
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubApiResult
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubContributorDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositorySearchResponseDto
 
 interface GitHubDataSource {
     suspend fun searchUsers(
@@ -26,4 +28,8 @@ interface GitHubDataSource {
         page: Int = GitHubApiService.DEFAULT_PAGE,
         perPage: Int = GitHubApiService.DEFAULT_PAGE_SIZE,
     ): GitHubApiResult<List<GitHubEventDto>>
+
+    suspend fun searchRepositories(query: String, perPage: Int): GitHubApiResult<GitHubRepositorySearchResponseDto>
+    suspend fun getRepository(owner: String, repository: String): GitHubApiResult<GitHubRepositoryDto>
+    suspend fun getRepositoryContributors(owner: String, repository: String, perPage: Int): GitHubApiResult<List<GitHubContributorDto>>
 }

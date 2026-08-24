@@ -12,6 +12,7 @@ import androidx.navigation.navArgument
 import com.mohamedamr.devcollab.feature.myprofile.MyProfileRoute
 import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
+import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
 import com.mohamedamr.devcollab.feature.requests.RequestsScreen
 import com.mohamedamr.devcollab.feature.saved.SavedScreen
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
@@ -25,6 +26,7 @@ fun AppNavigation(
     developerRepository: DeveloperRepository,
     authRepository: AuthRepository,
     appMemberRepository: AppMemberRepository,
+    discoveryRepository: DiscoveryRepository,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -35,6 +37,7 @@ fun AppNavigation(
         composable(AppDestination.Discover.route) {
             DiscoverRoute(
                 developerRepository = developerRepository,
+                discoveryRepository = discoveryRepository,
                 onDeveloperClick = { username ->
                     navController.navigate(DeveloperDetailsDestination.createRoute(username))
                 },

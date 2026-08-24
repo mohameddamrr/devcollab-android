@@ -56,12 +56,18 @@ import com.mohamedamr.devcollab.R
 import com.mohamedamr.devcollab.domain.model.DeveloperSummary
 import com.mohamedamr.devcollab.domain.model.DeveloperAccountType
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
+import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.TextButton
 import java.text.DateFormat
 import java.util.Date
 
 @Composable
 fun DiscoverRoute(
     developerRepository: DeveloperRepository,
+    discoveryRepository: DiscoveryRepository,
     onDeveloperClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -69,15 +75,42 @@ fun DiscoverRoute(
         factory = SearchViewModelFactory(developerRepository),
     )
     val uiState by searchViewModel.uiState.collectAsStateWithLifecycle()
-
-    DiscoverScreen(
-        uiState = uiState,
-        pagingData = searchViewModel.pagingData,
-        onQueryChanged = searchViewModel::onQueryChanged,
-        onSearch = searchViewModel::search,
-        onDeveloperClick = onDeveloperClick,
-        modifier = modifier,
+    val discoveryViewModel: CollaborationDiscoveryViewModel = viewModel(
+        factory = CollaborationDiscoveryViewModelFactory(discoveryRepository),
     )
+    val discoveryState by discoveryViewModel.uiState.collectAsStateWithLifecycle()
+    var showEvidenceDiscovery by rememberSaveable { mutableStateOf(false) }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+            TextButton(onClick = { showEvidenceDiscovery = false }, modifier = Modifier.weight(1f)) {
+                Text("GitHub user search")
+            }
+            TextButton(onClick = { showEvidenceDiscovery = true }, modifier = Modifier.weight(1f)) {
+                Text("Find collaborators")
+            }
+        }
+        if (showEvidenceDiscovery) {
+            CollaborationDiscoveryScreen(
+                uiState = discoveryState,
+                onTechnologiesChange = discoveryViewModel::onTechnologiesChange,
+                onRepositoryChange = discoveryViewModel::onRepositoryChange,
+                onTechnologySearch = discoveryViewModel::discoverByTechnologies,
+                onRepositorySearch = discoveryViewModel::discoverByRepository,
+                onDeveloperClick = onDeveloperClick,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            DiscoverScreen(
+                uiState = uiState,
+                pagingData = searchViewModel.pagingData,
+                onQueryChanged = searchViewModel::onQueryChanged,
+                onSearch = searchViewModel::search,
+                onDeveloperClick = onDeveloperClick,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
 }
 
 @Composable

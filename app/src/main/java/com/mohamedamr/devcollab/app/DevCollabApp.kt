@@ -18,12 +18,14 @@ import com.mohamedamr.devcollab.app.navigation.AppNavigation
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
+import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
 
 @Composable
 fun DevCollabApp(
     developerRepository: DeveloperRepository,
     authRepository: AuthRepository,
     appMemberRepository: AppMemberRepository,
+    discoveryRepository: DiscoveryRepository,
     modifier: Modifier = Modifier,
 ) {
     val navController = rememberNavController()
@@ -71,6 +73,7 @@ fun DevCollabApp(
             developerRepository = developerRepository,
             authRepository = authRepository,
             appMemberRepository = appMemberRepository,
+            discoveryRepository = discoveryRepository,
         )
     }
 }

@@ -5,6 +5,8 @@ import com.mohamedamr.devcollab.data.github.remote.dto.GitHubSearchResponseDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubUserDetailDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositoryDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubEventDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubContributorDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositorySearchResponseDto
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubApiResult
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRateLimit
 import com.mohamedamr.devcollab.data.github.remote.model.GitHubRemoteError
@@ -78,6 +80,39 @@ class GitHubRemoteDataSource(
             apiService.getUserPublicEvents(
                 username = username,
                 page = page,
+                perPage = perPage,
+            )
+        }
+    }
+
+    override suspend fun searchRepositories(
+        query: String,
+        perPage: Int,
+    ): GitHubApiResult<GitHubRepositorySearchResponseDto> {
+        require(query.isNotBlank()) { "Repository search query must not be blank." }
+        require(perPage in 1..GitHubApiService.MAX_PAGE_SIZE)
+        return executeRequest { apiService.searchRepositories(query = query.trim(), perPage = perPage) }
+    }
+
+    override suspend fun getRepository(
+        owner: String,
+        repository: String,
+    ): GitHubApiResult<GitHubRepositoryDto> {
+        require(owner.isNotBlank() && repository.isNotBlank()) { "Repository owner and name must not be blank." }
+        return executeRequest { apiService.getRepository(owner.trim(), repository.trim()) }
+    }
+
+    override suspend fun getRepositoryContributors(
+        owner: String,
+        repository: String,
+        perPage: Int,
+    ): GitHubApiResult<List<GitHubContributorDto>> {
+        require(owner.isNotBlank() && repository.isNotBlank()) { "Repository owner and name must not be blank." }
+        require(perPage in 1..GitHubApiService.MAX_PAGE_SIZE)
+        return executeRequest {
+            apiService.getRepositoryContributors(
+                owner = owner.trim(),
+                repository = repository.trim(),
                 perPage = perPage,
             )
         }

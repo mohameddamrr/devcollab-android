@@ -319,6 +319,15 @@ class GitHubRemoteDataSourceTest {
                 page: Int,
                 perPage: Int,
             ): Response<List<GitHubEventDto>> = throw CancellationException("cancelled")
+
+            override suspend fun searchRepositories(query: String, sort: String, order: String, page: Int, perPage: Int) =
+                throw CancellationException("cancelled")
+
+            override suspend fun getRepository(owner: String, repository: String): Response<GitHubRepositoryDto> =
+                throw CancellationException("cancelled")
+
+            override suspend fun getRepositoryContributors(owner: String, repository: String, includeAnonymous: Boolean, page: Int, perPage: Int) =
+                throw CancellationException("cancelled")
         }
         val dataSource = GitHubRemoteDataSource(cancellingService)
 

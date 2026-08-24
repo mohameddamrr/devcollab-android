@@ -9,10 +9,12 @@ data class GitHubRepositoryDto(
     val name: String,
     @SerialName("full_name")
     val fullName: String,
+    val owner: GitHubRepositoryOwnerDto = GitHubRepositoryOwnerDto(login = "", id = 0),
     @SerialName("html_url")
     val htmlUrl: String,
     val description: String? = null,
     val language: String? = null,
+    val topics: List<String> = emptyList(),
     @SerialName("stargazers_count")
     val starCount: Int,
     @SerialName("forks_count")
@@ -26,4 +28,10 @@ data class GitHubRepositoryDto(
     val updatedAt: String,
     @SerialName("pushed_at")
     val pushedAt: String? = null,
+)
+
+@Serializable
+data class GitHubRepositoryOwnerDto(
+    val login: String,
+    val id: Long,
 )

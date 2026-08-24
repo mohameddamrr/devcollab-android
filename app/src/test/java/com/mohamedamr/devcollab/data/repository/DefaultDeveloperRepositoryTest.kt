@@ -279,4 +279,13 @@ private class FakeGitHubDataSource(
         perPage: Int,
     ): GitHubApiResult<List<GitHubEventDto>> =
         checkNotNull(activityResult) { "No activity result configured for this test" }
+
+    override suspend fun searchRepositories(query: String, perPage: Int): GitHubApiResult<com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositorySearchResponseDto> =
+        error("Not needed by these tests")
+
+    override suspend fun getRepository(owner: String, repository: String): GitHubApiResult<GitHubRepositoryDto> =
+        error("Not needed by these tests")
+
+    override suspend fun getRepositoryContributors(owner: String, repository: String, perPage: Int): GitHubApiResult<List<com.mohamedamr.devcollab.data.github.remote.dto.GitHubContributorDto>> =
+        error("Not needed by these tests")
 }

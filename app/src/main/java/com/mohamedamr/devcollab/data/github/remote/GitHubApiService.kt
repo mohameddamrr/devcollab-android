@@ -4,6 +4,8 @@ import com.mohamedamr.devcollab.data.github.remote.dto.GitHubSearchResponseDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositoryDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubEventDto
 import com.mohamedamr.devcollab.data.github.remote.dto.GitHubUserDetailDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubContributorDto
+import com.mohamedamr.devcollab.data.github.remote.dto.GitHubRepositorySearchResponseDto
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -38,6 +40,30 @@ interface GitHubApiService {
         @Query("page") page: Int = DEFAULT_PAGE,
         @Query("per_page") perPage: Int = DEFAULT_PAGE_SIZE,
     ): Response<List<GitHubEventDto>>
+
+    @GET("search/repositories")
+    suspend fun searchRepositories(
+        @Query("q") query: String,
+        @Query("sort") sort: String = "stars",
+        @Query("order") order: String = SORT_DIRECTION_DESCENDING,
+        @Query("page") page: Int = DEFAULT_PAGE,
+        @Query("per_page") perPage: Int = DEFAULT_PAGE_SIZE,
+    ): Response<GitHubRepositorySearchResponseDto>
+
+    @GET("repos/{owner}/{repository}")
+    suspend fun getRepository(
+        @Path("owner") owner: String,
+        @Path("repository") repository: String,
+    ): Response<GitHubRepositoryDto>
+
+    @GET("repos/{owner}/{repository}/contributors")
+    suspend fun getRepositoryContributors(
+        @Path("owner") owner: String,
+        @Path("repository") repository: String,
+        @Query("anon") includeAnonymous: Boolean = false,
+        @Query("page") page: Int = DEFAULT_PAGE,
+        @Query("per_page") perPage: Int = DEFAULT_PAGE_SIZE,
+    ): Response<List<GitHubContributorDto>>
 
     companion object {
         const val DEFAULT_PAGE = 1
