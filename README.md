@@ -131,6 +131,20 @@ Coverage includes ViewModel states, remote/cache behavior, Room ordering/restora
     <td><img src="docs/screenshots/dark-repositories.png" alt="Developer repositories in dark theme" width="320"></td>
     <td><img src="docs/screenshots/dark-collaborator-discovery.png" alt="Collaborator discovery in dark theme" width="320"></td>
   </tr>
+  <tr>
+    <td align="center"><strong>GitHub sign-in</strong></td>
+    <td align="center"><strong>Member profile</strong></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/login-welcome.png" alt="WeDevelop welcome page with GitHub sign-in" width="320"></td>
+    <td><img src="docs/screenshots/dark-member-profile.png" alt="WeDevelop member collaboration profile in dark theme" width="320"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><strong>Collaboration requests</strong></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/screenshots/dark-requests.png" alt="Collaboration requests page in dark theme" width="320"></td>
+  </tr>
 </table>
 
 ## Limitations
