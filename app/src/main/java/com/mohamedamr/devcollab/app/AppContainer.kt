@@ -18,6 +18,8 @@ import com.mohamedamr.devcollab.data.repository.GitHubDiscoveryRepository
 import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
 import com.mohamedamr.devcollab.data.firebase.firestore.FirestoreCollaborationRequestRepository
 import com.mohamedamr.devcollab.domain.repository.CollaborationRequestRepository
+import com.mohamedamr.devcollab.data.repository.RoomSavedDeveloperRepository
+import com.mohamedamr.devcollab.domain.repository.SavedDeveloperRepository
 
 class AppContainer(
     applicationContext: Context,
@@ -31,7 +33,7 @@ class AppContainer(
             context = applicationContext,
             klass = DevCollabDatabase::class.java,
             name = DATABASE_NAME,
-        ).build()
+        ).addMigrations(DevCollabDatabase.MIGRATION_1_2).build()
     }
 
     val developerRepository: DeveloperRepository by lazy {
@@ -66,6 +68,10 @@ class AppContainer(
             firestore = FirebaseFirestore.getInstance(),
             auth = FirebaseAuth.getInstance(),
         )
+    }
+
+    val savedDeveloperRepository: SavedDeveloperRepository by lazy {
+        RoomSavedDeveloperRepository(database.savedDeveloperDao())
     }
 
     private companion object {

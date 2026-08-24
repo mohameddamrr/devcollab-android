@@ -14,6 +14,7 @@ import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
 import com.mohamedamr.devcollab.domain.repository.CollaborationRequestRepository
+import com.mohamedamr.devcollab.domain.repository.SavedDeveloperRepository
 import com.mohamedamr.devcollab.feature.requests.RequestsScreen
 import com.mohamedamr.devcollab.feature.saved.SavedScreen
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
@@ -29,6 +30,7 @@ fun AppNavigation(
     appMemberRepository: AppMemberRepository,
     discoveryRepository: DiscoveryRepository,
     collaborationRequestRepository: CollaborationRequestRepository,
+    savedDeveloperRepository: SavedDeveloperRepository,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -59,13 +61,21 @@ fun AppNavigation(
             DeveloperDetailsRoute(
                 username = username,
                 developerRepository = developerRepository,
+                savedDeveloperRepository = savedDeveloperRepository,
                 onBack = navController::navigateUp,
             )
         }
         composable(AppDestination.Requests.route) {
             RequestsScreen(authRepository, collaborationRequestRepository)
         }
-        composable(AppDestination.Saved.route) { SavedScreen() }
+        composable(AppDestination.Saved.route) {
+            SavedScreen(
+                repository = savedDeveloperRepository,
+                onDeveloperClick = { username ->
+                    navController.navigate(DeveloperDetailsDestination.createRoute(username))
+                },
+            )
+        }
         composable(AppDestination.Profile.route) {
             MyProfileRoute(authRepository, appMemberRepository)
         }

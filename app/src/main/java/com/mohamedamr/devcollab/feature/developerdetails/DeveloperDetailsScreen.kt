@@ -68,6 +68,7 @@ import com.mohamedamr.devcollab.domain.model.DeveloperActivity
 import com.mohamedamr.devcollab.domain.model.DeveloperActivityKind
 import com.mohamedamr.devcollab.domain.model.mostActiveRecently
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
+import com.mohamedamr.devcollab.domain.repository.SavedDeveloperRepository
 import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.Locale
 
@@ -75,6 +76,7 @@ import java.util.Locale
 fun DeveloperDetailsRoute(
     username: String,
     developerRepository: DeveloperRepository,
+    savedDeveloperRepository: SavedDeveloperRepository,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -83,6 +85,13 @@ fun DeveloperDetailsRoute(
         factory = DeveloperDetailsViewModelFactory(username, developerRepository),
     )
     val uiState by detailsViewModel.uiState.collectAsStateWithLifecycle()
+    val savedViewModel: SavedDeveloperViewModel = viewModel(
+        factory = SavedDeveloperViewModelFactory(savedDeveloperRepository),
+    )
+    val isSaved by savedViewModel.isSaved.collectAsStateWithLifecycle()
+    LaunchedEffect(uiState.result) {
+        (uiState.result as? DeveloperDetailsResultUiState.Success)?.profile?.let(savedViewModel::bind)
+    }
     val shareText = when (val result = uiState.result) {
         is DeveloperDetailsResultUiState.Success -> stringResource(
             R.string.share_profile_text,
@@ -113,6 +122,8 @@ fun DeveloperDetailsRoute(
         onShareProfile = {
             context.shareProfile(shareText, shareChooserTitle)
         },
+        isSaved = isSaved,
+        onToggleSaved = savedViewModel::toggle,
         modifier = modifier,
     )
 }
@@ -133,6 +144,8 @@ fun DeveloperDetailsScreen(
     onOpenGitHub: (String) -> Unit,
     onOpenRepository: (String) -> Unit = {},
     onShareProfile: (DeveloperProfile) -> Unit,
+    isSaved: Boolean = false,
+    onToggleSaved: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -165,6 +178,8 @@ fun DeveloperDetailsScreen(
                 profile = result.profile,
                 onOpenGitHub = onOpenGitHub,
                 onShareProfile = onShareProfile,
+                isSaved = isSaved,
+                onToggleSaved = onToggleSaved,
                 selectedTab = uiState.selectedTab,
                 repositoriesState = uiState.repositories,
                 activityState = uiState.activity,
@@ -191,6 +206,8 @@ private fun DeveloperProfileContent(
     profile: DeveloperProfile,
     onOpenGitHub: (String) -> Unit,
     onShareProfile: (DeveloperProfile) -> Unit,
+    isSaved: Boolean,
+    onToggleSaved: () -> Unit,
     selectedTab: DeveloperProfileTab,
     repositoriesState: DeveloperRepositoriesUiState,
     activityState: DeveloperActivityUiState,
@@ -325,6 +342,12 @@ private fun DeveloperProfileContent(
                     label = stringResource(R.string.profile_following),
                     modifier = Modifier.weight(1f),
                 )
+            }
+        }
+
+        item {
+            OutlinedButton(onClick = onToggleSaved, modifier = Modifier.fillMaxWidth()) {
+                Text(if (isSaved) "Remove from Saved" else "Save developer")
             }
         }
 
