@@ -51,12 +51,6 @@ class SearchViewModel(
                 }
             }
         }
-        viewModelScope.launch {
-            developerRepository.getLastSearch()?.let { lastSearch ->
-                _uiState.value = SearchUiState(query = lastSearch.query)
-                submitSearch()
-            }
-        }
     }
 
     fun onQueryChanged(query: String) {

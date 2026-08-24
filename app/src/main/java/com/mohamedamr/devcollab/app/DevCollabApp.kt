@@ -21,6 +21,7 @@ import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import com.mohamedamr.devcollab.domain.repository.DiscoveryRepository
 import com.mohamedamr.devcollab.domain.repository.CollaborationRequestRepository
 import com.mohamedamr.devcollab.domain.repository.SavedDeveloperRepository
+import com.mohamedamr.devcollab.core.settings.ThemeMode
 
 @Composable
 fun DevCollabApp(
@@ -30,8 +31,24 @@ fun DevCollabApp(
     discoveryRepository: DiscoveryRepository,
     collaborationRequestRepository: CollaborationRequestRepository,
     savedDeveloperRepository: SavedDeveloperRepository,
+    themeMode: ThemeMode,
+    onThemeModeChanged: (ThemeMode) -> Unit,
+    hasChosenAccess: Boolean,
+    onWelcomeCompleted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (!hasChosenAccess) {
+        WelcomeScreen(
+            authRepository = authRepository,
+            onMemberSignedIn = onWelcomeCompleted,
+            onContinueAsGuest = {
+                authRepository.signOut()
+                onWelcomeCompleted()
+            },
+            modifier = modifier,
+        )
+        return
+    }
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -80,6 +97,8 @@ fun DevCollabApp(
             discoveryRepository = discoveryRepository,
             collaborationRequestRepository = collaborationRequestRepository,
             savedDeveloperRepository = savedDeveloperRepository,
+            themeMode = themeMode,
+            onThemeModeChanged = onThemeModeChanged,
         )
     }
 }

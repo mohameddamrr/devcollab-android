@@ -20,11 +20,15 @@ import com.mohamedamr.devcollab.data.firebase.firestore.FirestoreCollaborationRe
 import com.mohamedamr.devcollab.domain.repository.CollaborationRequestRepository
 import com.mohamedamr.devcollab.data.repository.RoomSavedDeveloperRepository
 import com.mohamedamr.devcollab.domain.repository.SavedDeveloperRepository
+import com.mohamedamr.devcollab.core.settings.ThemePreferences
+import com.mohamedamr.devcollab.core.settings.WelcomePreferences
 
 class AppContainer(
     applicationContext: Context,
     isDebugBuild: Boolean,
 ) {
+    val themePreferences = ThemePreferences(applicationContext)
+    val welcomePreferences = WelcomePreferences(applicationContext)
     private val githubRemoteDataSource: GitHubRemoteDataSource by lazy {
         GitHubRemoteDataSource(GitHubClientFactory.create(isDebugBuild = isDebugBuild))
     }

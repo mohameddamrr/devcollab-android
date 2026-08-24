@@ -38,11 +38,14 @@ import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import com.mohamedamr.devcollab.R
 import coil3.compose.AsyncImage
+import com.mohamedamr.devcollab.core.settings.ThemeMode
 
 @Composable
 fun MyProfileRoute(
     authRepository: AuthRepository,
     appMemberRepository: AppMemberRepository,
+    themeMode: ThemeMode,
+    onThemeModeChanged: (ThemeMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val authViewModel: AuthViewModel = viewModel(
@@ -54,6 +57,8 @@ fun MyProfileRoute(
         uiState = uiState,
         onSignIn = { activity?.let(authViewModel::signIn) },
         onSignOut = authViewModel::signOut,
+        themeMode = themeMode,
+        onThemeModeChanged = onThemeModeChanged,
         onEditProfile = authViewModel::startEditingProfile,
         onCancelEdit = authViewModel::cancelEditingProfile,
         onSaveProfile = authViewModel::saveProfile,
@@ -73,6 +78,8 @@ fun MyProfileScreen(
     uiState: AuthUiState,
     onSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    onThemeModeChanged: (ThemeMode) -> Unit = {},
     onEditProfile: () -> Unit = {},
     onCancelEdit: () -> Unit = {},
     onSaveProfile: () -> Unit = {},
@@ -91,6 +98,30 @@ fun MyProfileScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(stringResource(R.string.auth_profile_title), style = MaterialTheme.typography.headlineMedium)
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text("Appearance", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Choose how WeDevelop looks on this device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ThemeMode.entries.forEach { mode ->
+                        FilterChip(
+                            selected = themeMode == mode,
+                            onClick = { onThemeModeChanged(mode) },
+                            label = {
+                                Text(mode.name.lowercase().replaceFirstChar(Char::uppercase))
+                            },
+                        )
+                    }
+                }
+            }
+        }
         when {
             uiState.isCheckingSession -> CircularProgressIndicator()
             uiState.user == null -> {

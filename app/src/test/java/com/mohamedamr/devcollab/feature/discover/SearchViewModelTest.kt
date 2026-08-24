@@ -33,7 +33,7 @@ class SearchViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `last search is restored and paged when ViewModel starts`() = runTest {
+    fun `stored search is not restored when ViewModel starts`() = runTest {
         val repository = FakeDeveloperRepository(
             lastSearch = LastSearch(
                 query = "kotlin",
@@ -48,9 +48,9 @@ class SearchViewModelTest {
 
         runCurrent()
 
-        assertEquals("kotlin", viewModel.uiState.value.query)
-        assertEquals(true, viewModel.uiState.value.hasSubmittedSearch)
-        assertEquals(listOf("kotlin"), repository.pagedQueries)
+        assertEquals("", viewModel.uiState.value.query)
+        assertFalse(viewModel.uiState.value.hasSubmittedSearch)
+        assertEquals(emptyList<String>(), repository.pagedQueries)
     }
 
     @Test

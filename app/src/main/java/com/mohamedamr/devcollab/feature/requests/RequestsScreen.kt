@@ -15,6 +15,8 @@ import com.mohamedamr.devcollab.domain.model.*
 import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.mohamedamr.devcollab.domain.repository.CollaborationRequestRepository
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
+import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
+import com.mohamedamr.devcollab.domain.repository.DeveloperRepositoryResult
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -28,6 +30,10 @@ data class RequestsUiState(
     val isWorking: Boolean = false,
     val showCreateForm: Boolean = false,
     val receiverGithubId: String = "",
+    val receiverGithubLogin: String = "",
+    val isCheckingRecipient: Boolean = false,
+    val recipientVerificationMessage: String? = null,
+    val recipientVerificationFailed: Boolean = false,
     val projectName: String = "",
     val projectDescription: String = "",
     val technologies: String = "",
@@ -43,6 +49,7 @@ class RequestsViewModel(
     private val authRepository: AuthRepository,
     private val requestRepository: CollaborationRequestRepository,
     private val appMemberRepository: AppMemberRepository,
+    private val developerRepository: DeveloperRepository,
     initialReceiverGithubId: Long?,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
@@ -54,6 +61,18 @@ class RequestsViewModel(
     val uiState = _uiState.asStateFlow()
 
     init {
+        if (initialReceiverGithubId != null) {
+            viewModelScope.launch {
+                appMemberRepository.findPublicMemberByGitHubId(initialReceiverGithubId)?.let { member ->
+                    _uiState.update {
+                        it.copy(
+                            receiverGithubLogin = member.githubLogin,
+                            recipientVerificationMessage = "Verified WeDevelop member: @${member.githubLogin}",
+                        )
+                    }
+                }
+            }
+        }
         viewModelScope.launch {
             authRepository.authenticatedUser.collectLatest { user ->
                 _uiState.update { it.copy(currentUser = user, isLoading = user != null) }
@@ -76,7 +95,14 @@ class RequestsViewModel(
 
     fun setShowSent(value: Boolean) = _uiState.update { it.copy(showSent = value) }
     fun setShowCreateForm(value: Boolean) = _uiState.update { it.copy(showCreateForm = value, errorMessage = null) }
-    fun updateReceiverGithubId(value: String) = update { copy(receiverGithubId = value.filter(Char::isDigit)) }
+    fun updateReceiverGithubLogin(value: String) = update {
+        copy(
+            receiverGithubLogin = value.trimStart().removePrefix("@").take(39),
+            receiverGithubId = "",
+            recipientVerificationMessage = null,
+            recipientVerificationFailed = false,
+        )
+    }
     fun updateProjectName(value: String) = update { copy(projectName = value.take(120)) }
     fun updateProjectDescription(value: String) = update { copy(projectDescription = value.take(2000)) }
     fun updateTechnologies(value: String) = update { copy(technologies = value) }
@@ -86,17 +112,73 @@ class RequestsViewModel(
     fun updateMessage(value: String) = update { copy(message = value.take(2000)) }
     fun updateEvidenceReasons(value: String) = update { copy(evidenceReasons = value) }
 
+    fun verifyRecipient() {
+        val login = _uiState.value.receiverGithubLogin.trim()
+        if (login.isEmpty()) {
+            _uiState.update {
+                it.copy(
+                    recipientVerificationMessage = "Enter a GitHub username first.",
+                    recipientVerificationFailed = true,
+                )
+            }
+            return
+        }
+        if (_uiState.value.isCheckingRecipient) return
+        _uiState.update {
+            it.copy(
+                isCheckingRecipient = true,
+                receiverGithubId = "",
+                recipientVerificationMessage = null,
+                recipientVerificationFailed = false,
+            )
+        }
+        viewModelScope.launch {
+            runCatching {
+                val profile = when (val result = developerRepository.getDeveloperProfile(login)) {
+                    is DeveloperRepositoryResult.Success -> result.data
+                    is DeveloperRepositoryResult.Failure -> error("GitHub user @$login could not be found.")
+                }
+                val member = appMemberRepository.findPublicMemberByGitHubId(profile.githubId)
+                    ?: error("@$login exists on GitHub but is not registered in WeDevelop.")
+                member
+            }.onSuccess { member ->
+                _uiState.update {
+                    it.copy(
+                        receiverGithubId = member.githubUserId.toString(),
+                        receiverGithubLogin = member.githubLogin,
+                        isCheckingRecipient = false,
+                        recipientVerificationMessage = "Verified WeDevelop member: @${member.githubLogin}",
+                        recipientVerificationFailed = false,
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        receiverGithubId = "",
+                        isCheckingRecipient = false,
+                        recipientVerificationMessage = error.message ?: "Unable to verify this recipient.",
+                        recipientVerificationFailed = true,
+                    )
+                }
+            }
+        }
+    }
+
     fun send() {
         val state = _uiState.value
         val user = state.currentUser ?: return
         val receiverGithubId = state.receiverGithubId.toLongOrNull()
-        if (receiverGithubId == null || state.projectName.isBlank() || state.neededRole.isBlank() || state.expectedCommitment.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Recipient and required project fields must be completed") }
+        if (receiverGithubId == null) {
+            _uiState.update { it.copy(errorMessage = "Verify the recipient before sending the request") }
+            return
+        }
+        if (state.projectName.isBlank() || state.neededRole.isBlank() || state.expectedCommitment.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Required project fields must be completed") }
             return
         }
         work {
             val recipient = appMemberRepository.findPublicMemberByGitHubId(receiverGithubId)
-                ?: error("This GitHub developer is not registered in DevCollab")
+                ?: error("This recipient is no longer registered in WeDevelop")
             val draft = CollaborationRequestDraft(
                 receiverUid = recipient.firebaseUid, senderGithubUserId = user.githubUserId,
                 receiverGithubUserId = receiverGithubId, projectName = state.projectName,
@@ -136,8 +218,8 @@ class RequestsViewModel(
 }
 
 @Composable
-fun RequestsScreen(authRepository: AuthRepository, requestRepository: CollaborationRequestRepository, appMemberRepository: AppMemberRepository, initialReceiverGithubId: Long? = null, modifier: Modifier = Modifier) {
-    val vm: RequestsViewModel = viewModel(factory = RequestsViewModelFactory(authRepository, requestRepository, appMemberRepository, initialReceiverGithubId))
+fun RequestsScreen(authRepository: AuthRepository, requestRepository: CollaborationRequestRepository, appMemberRepository: AppMemberRepository, developerRepository: DeveloperRepository, initialReceiverGithubId: Long? = null, modifier: Modifier = Modifier) {
+    val vm: RequestsViewModel = viewModel(factory = RequestsViewModelFactory(authRepository, requestRepository, appMemberRepository, developerRepository, initialReceiverGithubId))
     val state by vm.uiState.collectAsStateWithLifecycle()
     Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Collaboration requests", style = MaterialTheme.typography.headlineSmall)
@@ -173,21 +255,100 @@ fun RequestsScreen(authRepository: AuthRepository, requestRepository: Collaborat
 }
 
 @Composable private fun RequestForm(s: RequestsUiState, vm: RequestsViewModel) {
-    Text("Only registered DevCollab members can receive requests.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Field(s.receiverGithubId, vm::updateReceiverGithubId, "Recipient GitHub ID")
-    Field(s.projectName, vm::updateProjectName, "Project name")
-    Field(s.projectDescription, vm::updateProjectDescription, "Project description")
-    Field(s.technologies, vm::updateTechnologies, "Technologies (comma-separated)")
-    Field(s.collaborationType, vm::updateCollaborationType, "Collaboration type")
-    Field(s.neededRole, vm::updateNeededRole, "Role/help needed")
-    Field(s.expectedCommitment, vm::updateExpectedCommitment, "Expected commitment")
-    Field(s.evidenceReasons, vm::updateEvidenceReasons, "Why this developer? One reason per line")
-    Field(s.message, vm::updateMessage, "Personal message")
-    Button(vm::send, enabled = !s.isWorking) { Text("Send request") }
+    Text("Only registered WeDevelop members can receive requests.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Field(
+        s.receiverGithubLogin,
+        vm::updateReceiverGithubLogin,
+        "Recipient GitHub username *",
+        "Enter their GitHub username, such as JakeWharton. They must be registered in WeDevelop.",
+    )
+    OutlinedButton(
+        onClick = vm::verifyRecipient,
+        enabled = !s.isCheckingRecipient && s.receiverGithubLogin.isNotBlank(),
+    ) {
+        if (s.isCheckingRecipient) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            Spacer(Modifier.width(8.dp))
+            Text("Checking…")
+        } else {
+            Text("Verify recipient")
+        }
+    }
+    s.recipientVerificationMessage?.let { message ->
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (s.recipientVerificationFailed) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+        )
+    }
+    Field(
+        s.projectName,
+        vm::updateProjectName,
+        "Project name *",
+        "The name of the project you want to collaborate on.",
+    )
+    Field(
+        s.projectDescription,
+        vm::updateProjectDescription,
+        "Project description",
+        "Briefly explain the project, its purpose, and what you are building.",
+    )
+    Field(
+        s.technologies,
+        vm::updateTechnologies,
+        "Technologies",
+        "Languages, frameworks, or tools used by the project, separated by commas.",
+    )
+    Field(
+        s.collaborationType,
+        vm::updateCollaborationType,
+        "Collaboration type",
+        "The kind of work, such as a side project, open-source project, or startup.",
+    )
+    Field(
+        s.neededRole,
+        vm::updateNeededRole,
+        "Role/help needed *",
+        "The role or expertise you need, such as Android developer or UI designer.",
+    )
+    Field(
+        s.expectedCommitment,
+        vm::updateExpectedCommitment,
+        "Expected commitment *",
+        "The expected time and duration, such as 5 hours per week for two months.",
+    )
+    Field(
+        s.evidenceReasons,
+        vm::updateEvidenceReasons,
+        "Why this developer?",
+        "Explain why they are a good match. Enter each reason on a separate line.",
+    )
+    Field(
+        s.message,
+        vm::updateMessage,
+        "Personal message",
+        "Add a friendly note or any other context for the recipient.",
+    )
+    Text("* Required field", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Button(vm::send, enabled = !s.isWorking && s.receiverGithubId.isNotBlank()) { Text("Send request") }
 }
 
-@Composable private fun Field(value: String, onChange: (String) -> Unit, label: String) =
-    OutlinedTextField(value, onChange, label = { Text(label) }, modifier = Modifier.fillMaxWidth())
+@Composable private fun Field(
+    value: String,
+    onChange: (String) -> Unit,
+    label: String,
+    description: String,
+) = OutlinedTextField(
+    value = value,
+    onValueChange = onChange,
+    label = { Text(label) },
+    supportingText = { Text(description) },
+    modifier = Modifier.fillMaxWidth(),
+)
 
 @Composable private fun RequestCard(request: CollaborationRequest, sent: Boolean, disabled: Boolean, vm: RequestsViewModel) {
     ElevatedCard(Modifier.fillMaxWidth()) {
@@ -206,6 +367,6 @@ fun RequestsScreen(authRepository: AuthRepository, requestRepository: Collaborat
 
 private fun String.csv() = split(',').map { it.trim().take(40) }.filter(String::isNotBlank).distinct().take(10)
 
-private class RequestsViewModelFactory(private val auth: AuthRepository, private val requests: CollaborationRequestRepository, private val members: AppMemberRepository, private val initialReceiverGithubId: Long?) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST") override fun <T : ViewModel> create(modelClass: Class<T>): T = RequestsViewModel(auth, requests, members, initialReceiverGithubId) as T
+private class RequestsViewModelFactory(private val auth: AuthRepository, private val requests: CollaborationRequestRepository, private val members: AppMemberRepository, private val developers: DeveloperRepository, private val initialReceiverGithubId: Long?) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST") override fun <T : ViewModel> create(modelClass: Class<T>): T = RequestsViewModel(auth, requests, members, developers, initialReceiverGithubId) as T
 }

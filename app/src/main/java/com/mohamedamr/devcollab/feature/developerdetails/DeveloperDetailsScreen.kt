@@ -368,17 +368,24 @@ private fun DeveloperProfileContent(
             }
         }
 
-        currentGithubUserId?.let { signedInGithubId ->
-            item {
-                Button(
-                    onClick = {
-                        if (signedInGithubId == profile.githubId) onMyProfile()
-                        else onCollaborate(profile.githubId)
+        item {
+            Button(
+                onClick = {
+                    when (currentGithubUserId) {
+                        null -> onMyProfile()
+                        profile.githubId -> onMyProfile()
+                        else -> onCollaborate(profile.githubId)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    when (currentGithubUserId) {
+                        null -> "Sign in to Collaborate"
+                        profile.githubId -> "View My Profile"
+                        else -> "Send Collaboration Request"
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(if (signedInGithubId == profile.githubId) "View My Profile" else "Send Collaboration Request")
-                }
+                )
             }
         }
 

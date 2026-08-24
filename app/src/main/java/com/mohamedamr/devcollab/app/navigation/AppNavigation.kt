@@ -20,6 +20,7 @@ import com.mohamedamr.devcollab.feature.saved.SavedScreen
 import com.mohamedamr.devcollab.domain.repository.DeveloperRepository
 import com.mohamedamr.devcollab.feature.discover.DiscoverRoute
 import com.mohamedamr.devcollab.feature.developerdetails.DeveloperDetailsRoute
+import com.mohamedamr.devcollab.core.settings.ThemeMode
 
 @Composable
 fun AppNavigation(
@@ -31,6 +32,8 @@ fun AppNavigation(
     discoveryRepository: DiscoveryRepository,
     collaborationRequestRepository: CollaborationRequestRepository,
     savedDeveloperRepository: SavedDeveloperRepository,
+    themeMode: ThemeMode,
+    onThemeModeChanged: (ThemeMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -71,7 +74,7 @@ fun AppNavigation(
             )
         }
         composable(AppDestination.Requests.route) {
-            RequestsScreen(authRepository, collaborationRequestRepository, appMemberRepository)
+            RequestsScreen(authRepository, collaborationRequestRepository, appMemberRepository, developerRepository)
         }
         composable(
             route = CollaborationRequestDestination.route,
@@ -85,6 +88,7 @@ fun AppNavigation(
                 authRepository = authRepository,
                 requestRepository = collaborationRequestRepository,
                 appMemberRepository = appMemberRepository,
+                developerRepository = developerRepository,
                 initialReceiverGithubId = backStackEntry.arguments
                     ?.getLong(CollaborationRequestDestination.githubUserIdArgument),
             )
@@ -98,7 +102,12 @@ fun AppNavigation(
             )
         }
         composable(AppDestination.Profile.route) {
-            MyProfileRoute(authRepository, appMemberRepository)
+            MyProfileRoute(
+                authRepository = authRepository,
+                appMemberRepository = appMemberRepository,
+                themeMode = themeMode,
+                onThemeModeChanged = onThemeModeChanged,
+            )
         }
     }
 }

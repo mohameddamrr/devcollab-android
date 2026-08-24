@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">DevCollab</string>
+    <string name="app_name">WeDevelop</string>
     <string name="navigation_discover">Discover</string>
     <string name="navigation_requests">Requests</string>
     <string name="navigation_saved">Saved</string>
@@ -105,13 +105,13 @@
     <string name="profile_title">Your profile</string>
     <string name="profile_phase_one_description">Your GitHub-linked collaboration profile will appear here.</string>
     <string name="auth_profile_title">Your profile</string>
-    <string name="auth_signed_out_description">Sign in with GitHub to create your DevCollab member profile.</string>
+    <string name="auth_signed_out_description">Sign in with GitHub to create your WeDevelop member profile.</string>
     <string name="auth_sign_in">Sign in with GitHub</string>
     <string name="auth_opening_github">Opening GitHub…</string>
     <string name="auth_github_member">GitHub member</string>
     <string name="auth_github_id">GitHub ID: %1$d</string>
     <string name="auth_member_explanation">Your immutable GitHub ID securely links this account to your future collaboration profile.</string>
-    <string name="auth_creating_member_profile">Creating your DevCollab member profile…</string>
-    <string name="auth_member_profile_ready">DevCollab member profile connected</string>
+    <string name="auth_creating_member_profile">Creating your WeDevelop member profile…</string>
+    <string name="auth_member_profile_ready">WeDevelop member profile connected</string>
     <string name="auth_sign_out">Sign out</string>
 </resources>

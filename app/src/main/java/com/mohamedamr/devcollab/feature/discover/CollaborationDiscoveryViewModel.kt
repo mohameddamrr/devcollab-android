@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class CollaborationDiscoveryUiState(
-    val technologies: String = "Kotlin, Android, Jetpack Compose",
+    val technologies: String = "",
     val repository: String = "",
     val isLoading: Boolean = false,
     val candidates: List<DiscoveryCandidate> = emptyList(),
