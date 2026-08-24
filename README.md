@@ -1,110 +1,142 @@
 # DevCollab
 
-DevCollab is an Android application that searches for GitHub developers, displays
-paginated results, and opens a detailed public profile. It currently represents the
-complete standalone VOIS internship-assignment baseline and now includes the rich
-public GitHub profile delivered in Phase 8. Later phases will add authenticated
-collaboration features.
+DevCollab is a Kotlin and Jetpack Compose Android app for discovering potential developer collaborators. It began as the VOIS GitHub-user-search assignment and preserves that complete baseline while adding rich GitHub profiles, evidence-based discovery, GitHub OAuth, collaboration profiles and requests, and locally saved developers.
 
-## VOIS baseline features
+Public GitHub work is treated as **evidence**, not proof of expertise. The app reports relevant public projects and contributions; it does not invent skills or opaque “AI match” percentages.
 
-- Kotlin and Jetpack Compose with Material 3
-- GitHub user search using `GET /search/users`
-- Debounced search with manual keyboard/search-button submission
-- Result cards containing avatar, login, numeric GitHub ID, and account type
-- Developer details using `GET /users/{username}`
-- Paging 3 pagination with loading, error, retry, and end-of-results handling
-- Room persistence for the last successful query and its ordered results
-- Automatic restoration after the app is closed and reopened
-- Offline cached fallback with a visible stale-data message
-- Unit, networking, Room, Paging, and Compose UI tests
+## Features
 
-## Rich GitHub profile features
+### Complete VOIS baseline
 
-- Overview, Repositories, and Activity tabs
-- Public repository cards with external GitHub links
-- Incremental repository loading plus local search and Recent/Popular/Name sorting
-- Top-repository overview based on stars among repositories loaded so far
-- Repository-language summary based on primary-language repository counts
-- Recent public GitHub activity and a bounded “Most Active Recently” repository summary
-- Pull-to-refresh with independent profile, repository, and activity states
+- GitHub search through `GET /search/users`, with debouncing and Paging 3
+- Result avatar, login, immutable GitHub ID, and account type
+- Details navigation through `GET /users/{username}`
+- Initial/append loading, empty, error, retry, and completion states
+- Room-backed last-query/result persistence and offline restoration
+- Meaningful ViewModel, repository, networking, Paging, Room, and UI tests
+
+### Expanded product
+
+- Overview, Repositories, and Activity profile tabs
+- Repository search/sorting, language evidence, recent activity, and external links
+- Firebase Authentication using GitHub OAuth
+- App-member profiles with availability and self-declared collaboration preferences
+- Technology- and repository-based discovery
+- Bounded contributor aggregation, deduplication, deterministic ranking, and visible “Why this developer?” evidence
+- Contextual requests with Pending, Accepted, Declined, and Cancelled states
+- Locally persisted saved developers
+- Native GitHub opening and Android share-sheet actions
 
 ## Architecture
 
-The baseline follows MVVM, repository boundaries, and unidirectional data flow:
+DevCollab uses MVVM, repository boundaries, unidirectional data flow, immutable UI state, coroutines, and `StateFlow`.
 
 ```text
-Compose UI
-    | user events
-    v
-ViewModel -- immutable StateFlow --> Compose UI
-    |
-    v
-DeveloperRepository
-    |
-    +-- GitHub remote data source (Retrofit + OkHttp)
-    |
-    +-- RemoteMediator --> Room DAO --> PagingSource
+Compose UI --events--> ViewModel --operations--> Repository / domain logic
+     ^                    |                         /       |       \
+     |                    | StateFlow              v        v        v
+     +--------------------+                    GitHub   Firestore   Room
 ```
 
-The UI does not call Retrofit or Room. ViewModels own screen state and send work to the
-repository. GitHub remains authoritative for public developer data; Room stores an
-offline snapshot and is the Paging source displayed by Compose.
+- Compose renders state and emits events; it does not call HTTP, SQL, or Firestore APIs.
+- ViewModels coordinate work and expose immutable screen state.
+- Repositories choose data sources and map transport/storage models.
+- GitHub owns public data; Firestore owns member/request data; Room owns local data and caches.
+- Pure domain code performs matching and request-state validation.
 
-The detailed product plan and architecture decisions are in
-[`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md).
+Read [Architecture](docs/ARCHITECTURE.md), the [Project plan](docs/PROJECT_PLAN.md), and the [Interview guide](docs/INTERVIEW_GUIDE.md).
 
-## Requirements
+## Technology stack
 
-- Android Studio with JDK 11 or newer supported by the configured Android Gradle Plugin
-- Android SDK matching the versions declared in `app/build.gradle.kts`
-- An emulator or Android device running API 24 or newer
-- Internet access for fresh GitHub searches
+- Kotlin, Coroutines, Flow, and `StateFlow`
+- Jetpack Compose, Material 3, Navigation Compose
+- Retrofit, OkHttp, and kotlinx.serialization
+- Paging 3, Room, KSP, and Coil
+- Firebase Authentication, GitHub OAuth, and Cloud Firestore
+- JUnit, kotlinx-coroutines-test, MockWebServer, Room tests, and Compose UI tests
 
-No API secret is required for the current unauthenticated GitHub baseline. GitHub's
-unauthenticated REST API rate limit still applies. Do not add access tokens or secrets
-to source control.
+Versions are centralized in `gradle/libs.versions.toml`.
 
-## Run the app
+## Data ownership
+
+| Data | Authority | Local behavior |
+|---|---|---|
+| GitHub profiles, repositories, contributors, activity | GitHub REST API | Cached where implemented; stale state is labelled |
+| Authentication session | Firebase Auth | Restored by Firebase SDK |
+| Member profile and requests | Cloud Firestore | Firestore remains authoritative |
+| Last search/results | GitHub online | Room restores the latest successful snapshot |
+| Saved developers | Room | Locally authoritative in V1 |
+
+If GitHub fails, the repository checks Room. It displays labelled cached content when available; otherwise the UI shows an error and Retry.
+
+## Setup
+
+### Android
 
 1. Clone the repository and open it in Android Studio.
-2. Allow Gradle sync to finish.
-3. Start an emulator or connect an Android device.
-4. Select the `app` run configuration and press **Run**.
-5. Search for a GitHub login or term such as `android`.
+2. Install the SDK declared in `app/build.gradle.kts` and let Gradle sync.
+3. Run on an emulator/device meeting the configured `minSdk`.
 
-To verify offline restoration, complete a search, close the app, disable the device's
-network connection, and reopen it. The previous query and cached results should appear
-with a cached-data banner. Uninstalling the app or clearing its storage deletes Room.
+### Firebase and GitHub OAuth
+
+Secrets and `app/google-services.json` are intentionally excluded from Git.
+
+1. Register package `com.mohamedamr.devcollab` in Firebase.
+2. Put the downloaded configuration at `app/google-services.json`.
+3. Add required debug/release SHA fingerprints in Firebase.
+4. Create a GitHub OAuth App and use Firebase’s callback URL: `https://<project-id>.firebaseapp.com/__/auth/handler`.
+5. Enable GitHub in Firebase Authentication and enter the client ID/secret in the Firebase console only.
+6. Create Firestore and publish the complete `firestore.rules` in **Firestore Database → Rules**.
+
+Never put the GitHub client secret in Kotlin, committed Gradle properties, or `google-services.json`.
+
+## Demonstration
+
+1. Search and scroll to load another page.
+2. Open a developer and show profile tabs, repository links, GitHub, and sharing.
+3. Search successfully, close the app, disable networking, and reopen to show Room restoration.
+4. Sign in with GitHub and complete the collaboration profile.
+5. Discover by technologies or `owner/repository` and explain the evidence.
+6. Save a developer and verify Saved persists.
+7. With a second registered account, demonstrate sending and transitioning a request.
+
+GitHub-only users cannot receive requests. Two registered Firebase/GitHub accounts are required to test both request participants.
 
 ## Tests
 
-Run JVM unit tests:
-
 ```powershell
 .\gradlew.bat testDebugUnitTest
-```
-
-Run Room, Paging, and Compose instrumented tests on a connected emulator/device:
-
-```powershell
 .\gradlew.bat connectedDebugAndroidTest
+.\gradlew.bat assembleDebug lintDebug
 ```
 
-Run the baseline validation set:
+Coverage includes ViewModel states, remote/cache behavior, Room ordering/restoration, paging, matching/deduplication, evidence, and request transitions. Test Firestore rules against the Firebase Emulator Suite before production deployment.
 
-```powershell
-.\gradlew.bat testDebugUnitTest connectedDebugAndroidTest assembleDebug lintDebug
-```
+## Screenshots
 
-## Current limitations
+Capture screenshots from the configured project because authentication/member data belongs to its owner. Follow the [screenshot checklist](docs/INTERVIEW_GUIDE.md#screenshot-checklist) and place images under `docs/screenshots/` before a public portfolio release.
 
-- GitHub API requests are unauthenticated and therefore have a relatively low rate limit.
-- Cached search results may become stale and are clearly labelled when used offline.
-- Public GitHub data is evidence of public activity, not proof of professional skill.
-- Repository-language percentages count loaded repositories; they are not byte-level
-  language statistics or proficiency scores.
-- Activity uses up to 30 recent public GitHub events and is not lifetime contribution
-  history. GitHub may delay public events and does not expose private activity.
-- Authentication, collaboration profiles, evidence-based discovery, saved developers,
-  and collaboration requests belong to later project phases.
+## Limitations
+
+- Public repositories do not represent all experience; private work is unavailable.
+- Languages, topics, and contributions are evidence, not guaranteed proficiency.
+- Organization membership is not employment verification.
+- GitHub-only users have not opted into DevCollab.
+- Rate limits require bounded repository/contributor discovery.
+- Recent events are not lifetime contribution history.
+- Language percentages summarize loaded repositories, not byte-level usage or skills.
+- Saved developers are device-local in V1.
+- V1 has no chat and exposes only voluntarily supplied contact information.
+
+## Original assignment status
+
+- [x] Kotlin and Jetpack Compose
+- [x] GitHub Search Users API and result list
+- [x] ID, avatar, login, and useful fields
+- [x] Details navigation and GitHub User Details API
+- [x] Pagination
+- [x] Last-search persistence and relaunch restoration
+- [x] Meaningful tests
+- [x] Incremental Git history
+
+The protected assignment baseline was completed at Phase 7; later features preserve that independently demonstrable flow.

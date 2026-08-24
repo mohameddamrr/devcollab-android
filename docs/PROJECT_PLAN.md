@@ -213,19 +213,18 @@ position. First-page replacement is transactional; appended pages extend the ord
 snapshot. Later migrations may add recent searches, recently viewed developers, saved
 developers, profile cache, and bounded repository/activity caches.
 
-## Initial Firestore proposal
-
-Firestore is not implemented until its phase.
+## Implemented Firestore model
 
 ```text
-members/{firebaseUid}
+appUsers/{firebaseUid}
   githubUserId, githubLogin, displayName, avatarUrl
   collaborationBio, available, interests, collaborationTypes
   remotePreference, optionalLocation, optionalContact
   createdAt, updatedAt
 
-githubIdentityLinks/{githubUserId}
-  firebaseUid, createdAt
+publicMembers/{githubUserId}
+  firebaseUid, githubUserId, githubLogin, photoUrl
+  availableForCollaboration, updatedAt
 
 collaborationRequests/{requestId}
   senderUid, receiverUid
@@ -236,7 +235,9 @@ collaborationRequests/{requestId}
   createdAt, updatedAt
 ```
 
-One central request collection is queried by sender or receiver. Receiver-only
+The minimal authenticated `publicMembers` directory resolves a GitHub developer to a
+registered app member without exposing private profile/contact fields. One central
+request collection is queried by sender or receiver. Receiver-only
 transitions are `PENDING -> ACCEPTED|DECLINED`; sender-only transition is
 `PENDING -> CANCELLED`. Terminal states cannot transition again. Rules must validate
 ownership, allowed fields, immutable context, and query access. Globally race-free
@@ -330,37 +331,46 @@ can be added during offline polish without changing the MVVM contracts.**
 
 Configure Firebase GitHub OAuth, handle pending/cancelled sign-in, establish current
 user mapping and authenticated GitHub access, and add logout without exposing secrets.
+**Status: complete and committed.**
 
 ### Phase 10 - Collaboration profiles
 
 Add availability, collaboration bio/interests/types, remote preference, optional
 location/contact information, and correct current-user behavior.
+**Status: complete and committed.**
 
 ### Phase 11 - Developer discovery
 
 Add project requirements and specific-repository discovery; perform bounded repository
 and contributor calls, deduplicate by GitHub ID, rank deterministically, explain
 evidence, paginate candidates, and thoroughly test aggregation.
+**Status: complete and committed with bounded deterministic aggregation.**
 
 ### Phase 12 - Collaboration requests
 
 Add contextual send/received/sent workflows and validated Pending, Accepted, Declined,
 and Cancelled transitions with restrictive Firestore rules and emulator tests. No chat.
+**Status: implementation and validation complete and committed. Two-account manual
+workflow testing remains part of release QA.**
 
 ### Phase 13 - Saved developers and offline polish
 
 Complete save/unsave behavior, Saved screen, timestamps, stale-cache communication,
 offline indicators, retry paths, and cache policy polish.
+**Status: complete and committed. Saved developers are Room-owned in V1.**
 
 ### Phase 14 - QA and UI polish
 
 Review accessibility, layouts, state coverage, navigation, device behavior, API/Firebase
 failures, Room fallback, and request workflows.
+**Status: responsive/error-state and security review complete and committed.**
 
 ### Phase 15 - Documentation and presentation
 
 Complete README, screenshots, diagrams, architecture/API/cache/matching explanations,
 setup and test instructions, limitations, clean history, and internship presentation.
+**Status: documentation complete. Real configured-app screenshots remain a portfolio
+release task.**
 
 ## Mandatory Phase 7 checkpoint
 
@@ -410,3 +420,6 @@ and the README enables setup, demonstration, and an honest interview explanation
 - 2026-08-23: Implement remote PagingSource before considering Room RemoteMediator.
 - 2026-08-23: Persist an explicit ordered last-search snapshot for the VOIS requirement.
 - 2026-08-23: Use GitHub numeric ID for identity and login as mutable routing/display data.
+- 2026-08-24: Keep saved developers local in V1 until cross-device sync is required.
+- 2026-08-24: Use minimal authenticated `publicMembers` lookup documents while keeping
+  collaboration/contact fields owner-protected.
