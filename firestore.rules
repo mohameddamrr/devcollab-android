@@ -29,6 +29,22 @@ service cloud.firestore {
             && request.resource.data.photoUrl.size() <= 2048));
     }
 
+    function hasValidCollaborationProfile() {
+      return request.resource.data.onboardingCompleted is bool
+        && request.resource.data.availableForCollaboration is bool
+        && request.resource.data.collaborationBio is string
+        && request.resource.data.collaborationBio.size() <= 500
+        && request.resource.data.collaborationInterests is list
+        && request.resource.data.collaborationInterests.size() <= 10
+        && request.resource.data.preferredProjectTypes is list
+        && request.resource.data.preferredProjectTypes.size() <= 5
+        && request.resource.data.remotePreferred is bool
+        && request.resource.data.location is string
+        && request.resource.data.location.size() <= 100
+        && request.resource.data.contactMethod is string
+        && request.resource.data.contactMethod.size() <= 200;
+    }
+
     match /appUsers/{userId} {
       allow read: if isOwner(userId);
 
@@ -37,13 +53,16 @@ service cloud.firestore {
         && hasMatchingGitHubIdentity()
         && request.resource.data.keys().hasOnly([
           'firebaseUid', 'githubUserId', 'githubLogin', 'displayName', 'photoUrl',
-          'onboardingCompleted', 'availableForCollaboration', 'createdAt', 'updatedAt'
+          'onboardingCompleted', 'availableForCollaboration',
+          'collaborationBio', 'collaborationInterests', 'preferredProjectTypes',
+          'remotePreferred', 'location', 'contactMethod', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.firebaseUid is string
         && request.resource.data.githubUserId is int
         && hasValidIdentityMetadata()
         && request.resource.data.onboardingCompleted is bool
         && request.resource.data.availableForCollaboration is bool
+        && hasValidCollaborationProfile()
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
@@ -54,8 +73,14 @@ service cloud.firestore {
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.updatedAt == request.time
         && hasValidIdentityMetadata()
+        && hasValidCollaborationProfile()
+        && !(resource.data.onboardingCompleted == true
+          && request.resource.data.onboardingCompleted == false)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'githubLogin', 'displayName', 'photoUrl', 'updatedAt'
+          'githubLogin', 'displayName', 'photoUrl', 'onboardingCompleted',
+          'availableForCollaboration', 'collaborationBio', 'collaborationInterests',
+          'preferredProjectTypes', 'remotePreferred', 'location', 'contactMethod',
+          'updatedAt'
         ]);
 
       allow delete: if false;

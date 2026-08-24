@@ -3,6 +3,7 @@ package com.mohamedamr.devcollab.feature.myprofile
 import androidx.activity.ComponentActivity
 import com.mohamedamr.devcollab.domain.model.AuthenticatedAppUser
 import com.mohamedamr.devcollab.domain.model.AppMemberProfile
+import com.mohamedamr.devcollab.domain.model.CollaborationProfileInput
 import com.mohamedamr.devcollab.domain.repository.AppMemberRepository
 import com.mohamedamr.devcollab.domain.repository.AuthRepository
 import com.mohamedamr.devcollab.testutil.MainDispatcherRule
@@ -47,6 +48,27 @@ class AuthViewModelTest {
         assertEquals(null, viewModel.uiState.value.user)
     }
 
+    @Test
+    fun `saving collaboration profile updates immutable UI state`() = runTest {
+        val authRepository = FakeAuthRepository(testUser)
+        val memberRepository = FakeAppMemberRepository()
+        val viewModel = AuthViewModel(authRepository, memberRepository)
+        runCurrent()
+
+        viewModel.startEditingProfile()
+        viewModel.updateBio("Android side projects")
+        viewModel.setAvailable(true)
+        viewModel.toggleInterest("Android")
+        viewModel.saveProfile()
+        runCurrent()
+
+        assertEquals(false, viewModel.uiState.value.isEditingProfile)
+        assertEquals(true, viewModel.uiState.value.memberProfile?.onboardingCompleted)
+        assertEquals(true, viewModel.uiState.value.memberProfile?.availableForCollaboration)
+        assertEquals("Android side projects", viewModel.uiState.value.memberProfile?.collaborationBio)
+        assertEquals(listOf("Android"), viewModel.uiState.value.memberProfile?.collaborationInterests)
+    }
+
     private companion object {
         val testUser = AuthenticatedAppUser("firebase-1", 42L, "octocat", "Octocat", null, null)
     }
@@ -65,6 +87,27 @@ private class FakeAppMemberRepository : AppMemberRepository {
             photoUrl = user.photoUrl,
             onboardingCompleted = false,
             availableForCollaboration = false,
+        )
+    }
+
+    override suspend fun updateCollaborationProfile(
+        firebaseUid: String,
+        input: CollaborationProfileInput,
+    ): AppMemberProfile = checkNotNull(ensuredUser).let { user ->
+        AppMemberProfile(
+            firebaseUid = firebaseUid,
+            githubUserId = user.githubUserId,
+            githubLogin = user.githubLogin,
+            displayName = user.displayName,
+            photoUrl = user.photoUrl,
+            onboardingCompleted = true,
+            availableForCollaboration = input.availableForCollaboration,
+            collaborationBio = input.collaborationBio,
+            collaborationInterests = input.collaborationInterests,
+            preferredProjectTypes = input.preferredProjectTypes,
+            remotePreferred = input.remotePreferred,
+            location = input.location,
+            contactMethod = input.contactMethod,
         )
     }
 }
